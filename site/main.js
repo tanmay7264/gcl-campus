@@ -1,5 +1,5 @@
 import { PROJECTS } from './projects.js';
-import { STAGES, ROLE } from './data.js';
+import { STAGES, ROLE, PEOPLE } from './data.js';
 
 // Google Apps Script Web App URL (see ../apps-script/Code.gs). Empty = form shows "not connected".
 const SCRIPT_URL = '';
@@ -12,16 +12,16 @@ const PCOLOR = { deloitte: '#4F86C6', idfc: '#7B63A6', govardhan: '#B98A55', aur
 const ms = name => `<span class="ms">${name}</span>`;
 
 let map = null;          // 3D scene API (null without WebGL)
-let current = null;      // selected id: stage id, project id or "truck:<project>"
+let current = null;      // selected id: stage, project (= its student team), people group, or "rep:<project>" (company mentor)
 let tab = 'projects';
 
 /* ---------- Selection ---------- */
 function select(id, { fly = true } = {}) {
-  if (id && !S[id] && !P[id] && !(id.startsWith('truck:') && P[id.slice(6)])) id = null;
+  if (id && !S[id] && !P[id] && !PEOPLE[id] && !(id.startsWith('rep:') && P[id.slice(4)])) id = null;
   current = id;
   map?.select(id, { fly });
   renderInspector(); renderTracker(); renderRows();
-  history.replaceState(null, '', id ? '#' + id.replace('truck:', '') : location.pathname);
+  history.replaceState(null, '', id ? '#' + id.replace('rep:', '') : location.pathname);
 }
 
 /* ---------- Inspector ---------- */
@@ -39,23 +39,36 @@ function renderInspector() {
   insp.classList.remove('enter'); void insp.offsetWidth; insp.classList.add('enter');
   if (!current) {
     insp.innerHTML = `
-      ${head(ms('travel_explore'), '#66518A', 'WELCOME · GCL 2026-27', 'Explore the GCL Campus', 'Global Citizen Leaders Program')}
+      ${head(ms('school'), '#66518A', 'WELCOME · GCL 2026-27', 'Welcome to the GCL Campus', 'Where companies bring problems and students solve them')}
       <p class="lead">Share a <b>real challenge</b> from your organisation. Over <b>two trimesters</b>, our Post Graduate management teams turn it into a <b>researched, prototyped, commercially feasible solution</b>, mentored by WeSchool faculty and by you.</p>
       <p class="muted">Modelled on "Leadership Beyond Boundaries" by the Center for Creative Leadership (CCL) and Design Impact (DI).</p>
       <ul class="howto">
-        <li>${ms('ads_click')}<span>Click any building or truck to inspect it</span></li>
-        <li>${ms('pan_tool')}<span>Drag to pan · scroll to zoom · right-drag to rotate</span></li>
-        <li>${ms('star')}<span>Orange stops are where <b>you</b> get involved</span></li>
+        <li><i class="dot" style="background:#E8892B"></i><span><b>Company mentors</b> walk in with an orange problem card and leave with a green solution</span></li>
+        <li><i class="dot" style="background:#3FA796"></i><span><b>Student teams</b> work on live projects at the tables under the idea bulbs</span></li>
+        <li><i class="dot" style="background:#66518A"></i><span><b>Faculty mentors</b> guide every team, start to finish</span></li>
+        <li>${ms('ads_click')}<span>Click any building, team or person · drag to pan · scroll to zoom</span></li>
       </ul>
       <div class="actions"><button class="btn primary" data-select="challenge">${ms('play_arrow')}Start the tour</button><button class="btn soft" data-action="form">Submit a Challenge</button></div>`;
     return;
   }
-  const truck = current.startsWith('truck:');
-  const p = P[truck ? current.slice(6) : current];
+  const g = PEOPLE[current];
+  if (g) {
+    insp.innerHTML = `
+      ${head(ms(g.icon), g.color, g.kicker, g.title, 'On the GCL Campus')}
+      <p class="lead">${g.lead}</p>
+      ${rows(g.rows)}
+      <div class="egt"><b>Live projects so far</b></div>
+      ${PROJECTS.slice(0, 3).map(projCard).join('')}
+      <div class="actions">${g.cta === 'form' ? `<button class="btn primary" data-action="form">Submit a Challenge</button>` : `<button class="btn primary" data-select="${g.cta}">See them at work ${ms('arrow_forward')}</button>`}<button class="btn soft" data-select="challenge">How it works</button></div>`;
+    insp.querySelector('.rows').classList.add('stack');
+    return;
+  }
+  const rep = current.startsWith('rep:');
+  const p = P[rep ? current.slice(4) : current];
   if (p) {
     insp.innerHTML = `
       ${head(p.org[0], PCOLOR[p.id], 'PARTNER PROJECT · ' + p.domain.toUpperCase(), p.title, p.org)}
-      <div class="status">${truck ? '<span class="chip blue">On the road</span><span class="muted">Travelling the GCL journey</span>' : '<span class="chip green">Completed</span><span class="muted">Past GCL cohort</span>'}</div>
+      <div class="status">${rep ? '<span class="chip orange">Sharing the challenge</span><span class="muted">Company mentor visiting the team</span>' : '<span class="chip green">Live project · completed</span><span class="muted">Student team at work</span>'}</div>
       <button class="thumb" data-poster="${p.id}"><img src="${p.image}" alt="${p.org} project poster"><span>${ms('open_in_full')} View poster</span></button>
       ${rows([['Challenge', p.challenge], ['Stakeholders', p.stakeholders], ['Insight', p.insight], ['Prototype', p.prototype], ['Solution', p.outcome]])}
       <p class="team">${ms('groups')}<span>${p.team}${p.mentor ? '<br>' + p.mentor : ''}</span></p>
@@ -83,14 +96,14 @@ function renderInspector() {
 
 /* ---------- Tracker ---------- */
 function renderTracker() {
-  const si = S[current]?.i ?? (current ? STAGES.length : -1); // project selected = journey complete
+  const si = S[current]?.i ?? (P[current?.replace('rep:', '')] ? STAGES.length : -1); // a project = journey complete
   $('#steps').innerHTML = STAGES.map((s, i) => {
     const st = i < si ? 'done' : i === si ? 'active' : 'todo';
     return `<li class="${st}"><button data-select="${s.id}" aria-current="${st === 'active' ? 'step' : 'false'}">
       <span class="dot">${st === 'done' ? ms('check') : s.num}</span><b>${s.short}</b>
       <small>${st === 'active' ? 'You are here' : s.term.split(' · ')[0].replace('Trimester', 'Trim')}</small></button></li>`;
   }).join('');
-  const p = P[current?.replace('truck:', '')] || P[S[current]?.eg] || P.idfc;
+  const p = P[current?.replace('rep:', '')] || P[S[current]?.eg] || P.idfc;
   $('#trackSub').textContent = `#GCL-${p.id.toUpperCase()} · ${p.title}`;
   $('#current').dataset.select = p.id;
   $('#current').innerHTML = `<span class="tile lg" style="background:${PCOLOR[p.id]}">${p.org.slice(0, 3).toUpperCase()}</span>
@@ -164,7 +177,8 @@ select(initial, { fly: false });
 import('./scene.js').then(({ createScene }) => {
   map = createScene($('#scene'), $('#labels'), { onSelect: id => select(id), reduceMotion });
   STAGES.forEach(s => map.addLabel(s.id, `<i class="${s.id === 'challenge' ? 'orange' : ''}">${s.num}</i>${s.building}`, 'stage'));
-  PROJECTS.forEach(p => map.addLabel(p.id, p.org, 'project'));
+  PROJECTS.forEach(p => map.addLabel(p.id, `${ms('groups')}${p.org}`, 'project'));
+  map.addLabel('about', `${ms('account_balance')}WeSchool Main Block`, 'project');
   if (current) map.select(current);
 }).catch(err => {
   console.warn('3D campus disabled:', err);

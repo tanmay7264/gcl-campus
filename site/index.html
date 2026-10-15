@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GCL Campus · Partner with WeSchool</title>
+<title>GCL Campus · Bring a live problem to WeSchool students</title>
 <meta name="description" content="Explore the WeSchool Global Citizen Leaders (GCL) program as a 3D campus: see how your challenge becomes a commercially feasible solution, browse past partner projects, and submit a challenge.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -15,7 +15,7 @@
 } }</script>
 </head>
 <body>
-<div class="map" aria-label="3D GCL campus map. Click a building to inspect it.">
+<div class="map" aria-label="3D GCL college campus. Click a building, student team or person to learn more.">
   <canvas id="scene"></canvas>
   <div id="labels" class="labels"></div>
   <p class="nogl" hidden>The 3D campus needs WebGL. Use the lists and tracker to explore.</p>
@@ -43,6 +43,13 @@
   <div class="card kpi"><span class="tile green"><span class="ms">conversion_path</span></span><div><small>Journey stages</small><b>5 <em>challenge → solution</em></b><small>design-thinking flow</small></div></div>
 </section>
 
+<nav class="card legend" aria-label="Who's on campus">
+  <small>Who's on campus</small>
+  <button data-select="companies"><i style="background:#E8892B"></i>Companies</button>
+  <button data-select="students"><i style="background:#3FA796"></i>Students</button>
+  <button data-select="faculty"><i style="background:#66518A"></i>Faculty</button>
+</nav>
+
 <div class="card controls" role="toolbar" aria-label="Map controls">
   <button data-action="zoomin" aria-label="Zoom in"><span class="ms">add</span></button>
   <button data-action="zoomout" aria-label="Zoom out"><span class="ms">remove</span></button>
@@ -54,7 +61,7 @@
 
 <section class="card tracker" aria-label="Challenge tracking">
   <div class="steps-wrap">
-    <h2>Challenge Tracking <small id="trackSub">How your challenge moves through GCL</small></h2>
+    <h2>Live Project Tracker <small id="trackSub">How your challenge moves through GCL</small></h2>
     <ol class="steps" id="steps"></ol>
   </div>
   <button class="current" id="current" type="button"></button>
