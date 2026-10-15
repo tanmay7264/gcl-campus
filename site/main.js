@@ -96,25 +96,42 @@ function renderInspector() {
 }
 
 /* ---------- Tracker ---------- */
+const WHO = { companies: ['Company', '#E8892B'], faculty: ['Faculty', '#66518A'], students: ['Students', '#3FA796'] };
 function renderTracker() {
-  const live = !current && story; // nothing selected: the tracker follows the live project
+  const live = !current && story; // nothing selected: the tracker narrates the featured company's live project
   const si = live ? S[story.stage].i : S[current]?.i ?? (P[current?.replace('rep:', '')] ? STAGES.length : -1); // a project = journey complete
+  const walking = live && story.phase === 'walk';
   $('#steps').innerHTML = STAGES.map((s, i) => {
     const st = i < si ? 'done' : i === si ? 'active' : 'todo';
-    return `<li class="${st}"><button data-select="${s.id}" aria-current="${st === 'active' ? 'step' : 'false'}">
-      <span class="dot">${st === 'done' ? ms('check') : s.num}</span><b>${s.short}</b>
-      <small>${st === 'active' ? (live ? 'Live now' : 'You are here') : s.term.split(' · ')[0].replace('Trimester', 'Trim')}</small></button></li>`;
+    const cls = st + (walking && i === si ? ' walking' : '') + (walking && i === si - 1 ? ' leaving' : '');
+    const dot = st === 'done' ? ms('check') : walking && i === si ? ms('directions_walk') : s.num;
+    const sub = st === 'active' ? (live ? (walking ? 'On the way' : 'Happening now') : 'You are here') : s.term.split(' · ')[0].replace('Trimester', 'Trim');
+    return `<li class="${cls}"><button data-select="${s.id}" aria-current="${st === 'active' ? 'step' : 'false'}"><span class="dot">${dot}</span><b>${s.short}</b><small>${sub}</small></button></li>`;
   }).join('');
   const p = live ? P[story.project] : P[current?.replace('rep:', '')] || P[S[current]?.eg] || P.idfc;
-  $('#trackSub').textContent = live ? `● Live · ${p.org} · ${S[story.stage].live}` : `#GCL-${p.id.toUpperCase()} · ${p.title}`;
-  $('#current').dataset.select = p.id;
-  $('#current').innerHTML = `<span class="tile lg" style="background:${PCOLOR[p.id]}">${p.org.slice(0, 3).toUpperCase()}</span>
-    <span><b>#GCL-${p.id.toUpperCase()}</b><small>${p.org}</small><span class="chip ${live ? 'orange' : 'green'}">${live ? S[story.stage].short + ' in progress' : current && S[current] ? 'Example for this stage' : 'Completed project'}</span></span>${ms('chevron_right')}`;
+  if (live) {
+    const s = S[story.stage];
+    $('#trackSub').innerHTML = `<span class="featured"><span class="tile" style="background:${PCOLOR[p.id]}">${p.org[0]}</span>${p.org}</span><span class="muted">${p.title} · now featured</span>`;
+    $('#current').innerHTML = `
+      <div class="now ${walking ? 'walk' : 'work'}">
+        <div class="now-head"><span class="live-dot"></span><b>${walking ? 'On the way to ' + s.building : 'Happening now · ' + s.building}</b><span class="step">Step ${s.i + 1} of ${STAGES.length}</span></div>
+        <p>${s.plain}</p>
+        <div class="now-foot">
+          <span class="who">${s.who.map(w => `<span><i style="background:${WHO[w][1]}"></i>${WHO[w][0]}</span>`).join('')}</span>
+          <span class="you ${s.you ? '' : 'none'}">${s.you ? '★ Company: ' + s.you : 'Students lead this step'}</span>
+        </div>
+        <div class="timebar"><i style="animation-duration:${walking ? 1.2 : story.duration}s"></i></div>
+      </div>`;
+    return;
+  }
+  $('#trackSub').textContent = `#GCL-${p.id.toUpperCase()} · ${p.title}`;
+  $('#current').innerHTML = `<button class="ccard" data-select="${p.id}"><span class="tile lg" style="background:${PCOLOR[p.id]}">${p.org.slice(0, 3).toUpperCase()}</span>
+    <span><b>#GCL-${p.id.toUpperCase()}</b><small>${p.org}</small><span class="chip green">${current && S[current] ? 'Example for this stage' : 'Completed project'}</span></span>${ms('chevron_right')}</button>`;
 }
 
 /* ---------- List tabs + search ---------- */
 const rowStage = s => `<li><button data-select="${s.id}" class="${current === s.id ? 'on' : ''}"><span class="tile" style="background:${s.id === 'challenge' ? '#F0973A' : '#7AA342'}">${s.num}</span><span><b>${s.title}</b><small>${s.building} · ${s.term}</small></span><span class="chip">${s.role ? '★ You' : 'Students'}</span></button></li>`;
-const rowProject = p => `<li><button data-select="${p.id}" class="${current === p.id ? 'on' : ''}"><span class="tile" style="background:${PCOLOR[p.id]}">${p.org[0]}</span><span><b>${p.org}</b><small>${p.title}</small></span><span class="chip">${p.domain.split(' · ')[0]}</span></button></li>`;
+const rowProject = p => { const f = story?.project === p.id; return `<li><button data-select="${p.id}" class="${current === p.id ? 'on' : ''} ${f ? 'featured' : ''}"><span class="tile" style="background:${PCOLOR[p.id]}">${p.org[0]}</span><span><b>${p.org}</b><small>${f ? 'Live now · ' + S[story.stage].short : p.title}</small></span><span class="chip ${f ? 'orange' : ''}">${f ? '● Live' : p.domain.split(' · ')[0]}</span></button></li>`; };
 const rowRole = s => `<li><button data-select="${s.id}" class="${current === s.id ? 'on' : ''}"><span class="tile" style="background:#F0973A">${ms('star')}</span><span><b>${s.role}</b><small>${s.title} · ${s.term}</small></span></button></li>`;
 function renderRows() {
   const q = $('#search').value.trim().toLowerCase();
@@ -179,11 +196,14 @@ select(initial, { fly: false });
 import('./scene.js').then(({ createScene }) => {
   map = createScene($('#scene'), $('#labels'), {
     onSelect: id => select(id), reduceMotion,
-    onStory: (stage, project) => {
-      story = { stage, project };
-      const s = S[stage], p = P[project];
-      map.storyEl.innerHTML = `<span class="live-dot"></span><span><b>${p.org} · ${s.short}</b><small>${s.live}</small></span>`;
+    onStory: ev => {
+      const changed = ev.project !== story?.project;
+      story = ev;
+      const s = S[ev.stage], p = P[ev.project];
+      map.storyEl.innerHTML = `<span class="live-dot"></span><span><b>${p.org}</b><small>${ev.phase === 'walk' ? 'Walking to ' + s.building : s.short + ' · ' + s.building}</small></span>`;
+      document.querySelectorAll('.maplabel[data-id]').forEach(l => l.classList.toggle('featured', l.dataset.id === ev.project));
       if (!current) renderTracker();
+      if (changed || tab === 'projects') renderRows();
     },
   });
   STAGES.forEach(s => map.addLabel(s.id, `<i class="${s.id === 'challenge' ? 'orange' : ''}">${s.num}</i>${s.building}`, 'stage'));

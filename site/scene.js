@@ -322,14 +322,15 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, reduceMotion 
     }
     const cast = [mentor, ...crew];
     cast.forEach((a, k) => { if (b.spots[k]) walkTo(a, b.spots[k], b.doors?.[k] || b.door); });
-    onStory?.(STAGE_IDS[i], project());
+    onStory?.({ stage: STAGE_IDS[i], project: project(), phase: 'walk' });
   }
   function updateStory(dt) {
     let arrived = true;
     for (const m of mentors) if (m !== mentor && m.path) { if (stepActor(m, dt)) m.r.g.visible = m.card.visible = false; }
     [mentor, ...crew].forEach(a => { if (!stepActor(a, dt)) arrived = false; });
     if (phase === 'walk' && arrived) {
-      phase = 'dwell'; dwell = beat === 5 ? 8 : 6.5;
+      phase = 'dwell'; dwell = beat === 5 ? 9 : 8;
+      onStory?.({ stage: STAGE_IDS[beat], project: project(), phase: 'work', duration: dwell });
       const b = BEATS[beat], look = at(...b.look);
       [mentor, ...crew].forEach((a, k) => { if (!b.spots[k]) return; a.r.pose = b.poses[k] || 'listen'; face(a.r.g, k > 1 && beat > 2 ? at(...b.spots[0]) : k > 1 && beat === 0 ? at(...BEATS[1].look) : look); });
       if (beat === 0) face(mentor.r.g, crew[0].r.g.position), face(crew[0].r.g, mentor.r.g.position);
@@ -340,6 +341,11 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, reduceMotion 
       if (dwell <= 0) { if (beat === 5) { loopN++; startBeat(0); } else startBeat(beat + 1); }
     }
   }
+  // Orange spotlight that follows the featured company's group
+  const spot = new THREE.Mesh(new THREE.RingGeometry(1, 1.16, 56), new THREE.MeshBasicMaterial({ color: '#F0973A', transparent: true, opacity: 0.7, depthWrite: false }));
+  spot.rotation.x = -Math.PI / 2; scene.add(spot);
+  const spotFill = new THREE.Mesh(new THREE.CircleGeometry(1, 56), new THREE.MeshBasicMaterial({ color: '#F0973A', transparent: true, opacity: 0.1, depthWrite: false }));
+  spotFill.rotation.x = -Math.PI / 2; scene.add(spotFill);
   const storyAnchor = new THREE.Vector3();
   function groupCentre() {
     const b = BEATS[beat]; storyAnchor.set(0, 0, 0); let n = 0;
@@ -422,7 +428,7 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, reduceMotion 
   labelsEl.append(storyEl);
   function addLabel(id, html, cls) {
     const el = document.createElement('button');
-    el.className = 'maplabel ' + cls; el.innerHTML = html; el.type = 'button';
+    el.className = 'maplabel ' + cls; el.innerHTML = html; el.type = 'button'; el.dataset.id = id;
     el.addEventListener('click', () => onSelect(id));
     labelsEl.append(el);
     labels.push({ id, el, anchor: objects[id]?.top ?? teams[id]?.top });
@@ -478,7 +484,12 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, reduceMotion 
       l.el.style.transform = `translate(${((v.x + 1) / 2 * w).toFixed(1)}px, ${((1 - v.y) / 2 * h).toFixed(1)}px) translate(-50%, -100%)`;
       l.el.classList.toggle('on', l.id === selected);
     }
-    v.copy(groupCentre()).project(camera);
+    const gc = groupCentre();
+    const sr = phase === 'walk' ? 1.1 : 1.7;
+    spot.scale.setScalar(THREE.MathUtils.lerp(spot.scale.x, sr, 0.08)); spotFill.scale.copy(spot.scale);
+    spot.position.set(gc.x, 0.05, gc.z); spotFill.position.set(gc.x, 0.045, gc.z);
+    if (!reduceMotion) spot.material.opacity = 0.55 + Math.sin(t * 3) * 0.25;
+    v.copy(gc).project(camera);
     storyEl.style.transform = `translate(${((v.x + 1) / 2 * w).toFixed(1)}px, ${((1 - v.y) / 2 * h).toFixed(1)}px) translate(-50%, -100%)`;
   });
 
