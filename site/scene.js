@@ -28,7 +28,7 @@ const HAIR = ['#2E2633', '#4A3426', '#1F1B2D', '#6B4A2E'];
 const STUDENT_SHIRTS = ['#3FA796', '#5BB4D9', '#F2C14E', '#8DBA4E', '#E57A7A', '#5E8DD0'];
 const ROLE_COLOUR = { students: '#3FA796', faculty: '#66518A', companies: '#E8892B' };
 
-export function createScene(canvas, labelsEl, { onSelect, reduceMotion }) {
+export function createScene(canvas, labelsEl, { onSelect, onStory, reduceMotion }) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true }); // throws without WebGL
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
@@ -127,130 +127,224 @@ export function createScene(canvas, labelsEl, { onSelect, reduceMotion }) {
   }
   inst(new THREE.BoxGeometry(0.3, 0.32, 0.02), mat('#CFDAEE'), windows, (o, [x, y, z, side]) => { o.position.set(x, y, z); o.rotation.y = side ? Math.PI / 2 : 0; });
 
-  /* ---------- People ---------- */
-  const geo = {
-    legs: new THREE.BoxGeometry(0.2, 0.24, 0.13), body: new THREE.CylinderGeometry(0.1, 0.14, 0.36, 8),
-    head: new THREE.SphereGeometry(0.1, 12, 10), hair: new THREE.SphereGeometry(0.106, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2),
-    pack: new THREE.BoxGeometry(0.1, 0.2, 0.18), case: new THREE.BoxGeometry(0.06, 0.12, 0.18),
-  };
+  /* ---------- People: jointed figures (local +x = forward) ---------- */
   const roleMats = { students: new Set(), faculty: new Set(), companies: new Set() };
   let seed = 7; const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   const pick = a => a[Math.floor(rand() * a.length)];
-  function person(role, id) {
-    const g = new THREE.Group(), inner = new THREE.Group(); g.add(inner);
-    const shirt = role === 'students' ? pick(STUDENT_SHIRTS) : role === 'faculty' ? '#66518A' : '#2F4B7C';
-    const shirtMat = mat(shirt, role + shirt); roleMats[role].add(shirtMat);
-    inner.add(mesh(geo.legs, mat(role === 'students' ? '#4A5A78' : '#3B3650'), 0, 0.12, 0));
-    inner.add(mesh(geo.body, shirtMat, 0, 0.42, 0));
-    inner.add(mesh(geo.head, mat(pick(SKIN)), 0, 0.7, 0));
-    inner.add(mesh(geo.hair, mat(role === 'faculty' && rand() < 0.4 ? '#9A95AD' : pick(HAIR)), 0, 0.71, 0));
-    if (role === 'students') inner.add(mesh(geo.pack, mat('#5B5770'), -0.15, 0.45, 0));
-    if (role === 'companies') inner.add(mesh(geo.case, mat('#6B4A2E'), 0.02, 0.2, 0.19));
-    if (role === 'faculty') inner.add(mesh(new THREE.BoxGeometry(0.02, 0.16, 0.12), mat('#FFFFFF'), 0.13, 0.45, 0.1)); // notebook
-    g.traverse(o => { if (o.isMesh) { o.userData.id = id; pickables.push(o); } });
-    g.userData.inner = inner;
-    g.scale.setScalar(1.3);
-    scene.add(g);
-    return g;
-  }
-  const facing = (g, from, to) => { g.rotation.y = Math.atan2(-(to.z - from.z), to.x - from.x); };
+  const geoCache = new Map();
+  const G = (key, make) => { if (!geoCache.has(key)) geoCache.set(key, make()); return geoCache.get(key); };
+  const capsule = (r, l) => G('c' + r + l, () => new THREE.CapsuleGeometry(r, l, 3, 8));
+  const ball = r => G('s' + r, () => new THREE.SphereGeometry(r, 14, 10));
+  const cube = (x, y, z) => G('b' + x + y + z, () => new THREE.BoxGeometry(x, y, z));
+  const rigs = [];
 
-  // Teams at tables: students discussing, an idea bulb above, laptops on the table
-  const teams = {}, discussing = [];
+  function person(role, id, shirt) {
+    const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
+    const skin = mat(pick(SKIN));
+    const top = shirt || (role === 'students' ? pick(STUDENT_SHIRTS) : role === 'faculty' ? '#66518A' : '#2F4B7C');
+    const topMat = mat(top, role + top); roleMats[role].add(topMat);
+    const pants = mat(role === 'students' ? pick(['#3E5679', '#2F3B52', '#7A6A58', '#4A5A78']) : role === 'faculty' ? '#3B3650' : '#26324A');
+    const shoe = mat(role === 'students' ? '#F4F4F6' : '#2B2530');
+    const legs = [], arms = [];
+    for (const side of [-1, 1]) {
+      const hip = new THREE.Group(); hip.position.set(0, 0.46, side * 0.055);
+      hip.add(mesh(capsule(0.043, 0.15), pants, 0, -0.11, 0));
+      const knee = new THREE.Group(); knee.position.y = -0.22; hip.add(knee);
+      knee.add(mesh(capsule(0.037, 0.14), pants, 0, -0.1, 0), mesh(cube(0.11, 0.045, 0.066), shoe, 0.026, -0.215, 0));
+      body.add(hip); legs.push({ hip, knee });
+    }
+    const torso = mesh(capsule(0.1, 0.17), topMat, 0, 0.66, 0); torso.scale.set(0.7, 1, 1); body.add(torso);
+    body.add(mesh(G('neck', () => new THREE.CylinderGeometry(0.034, 0.04, 0.07, 8)), skin, 0, 0.88, 0));
+    const head = new THREE.Group(); head.position.y = 0.97; body.add(head);
+    const skull = mesh(ball(0.085), skin, 0, 0, 0); skull.scale.set(0.95, 1.08, 0.92); head.add(skull);
+    for (const s of [-1, 1]) head.add(mesh(ball(0.011), mat('#1F1B2D'), 0.079, 0.012, s * 0.03, false));
+    head.add(mesh(cube(0.012, 0.008, 0.035), mat('#B5655A'), 0.08, -0.04, 0, false)); // mouth
+    const hairMat = mat(role === 'faculty' && rand() < 0.45 ? '#A8A3B5' : pick(HAIR));
+    const cap = mesh(G('hcap', () => new THREE.SphereGeometry(0.092, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.55)), hairMat, -0.01, 0.01, 0);
+    cap.rotation.z = 0.45; head.add(cap); // hairline lifted at the front so the face shows
+    const style = rand();
+    if (style < 0.45) { const back = mesh(ball(0.08), hairMat, -0.045, -0.07, 0); back.scale.set(0.55, 1.35, 1.05); head.add(back); } // long hair
+    else if (style < 0.6) head.add(mesh(ball(0.04), hairMat, -0.075, 0.07, 0)); // bun
+    for (const side of [-1, 1]) {
+      const sh = new THREE.Group(); sh.position.set(0, 0.82, side * 0.13); sh.rotation.x = -side * 0.09;
+      const sleeve = role === 'students' && rand() < 0.5 ? skin : topMat; // t-shirts show forearms
+      sh.add(mesh(capsule(0.032, 0.13), topMat, 0, -0.09, 0));
+      const el = new THREE.Group(); el.position.y = -0.19; sh.add(el);
+      el.add(mesh(capsule(0.028, 0.12), sleeve, 0, -0.08, 0), mesh(ball(0.03), skin, 0, -0.17, 0));
+      body.add(sh); arms.push({ sh, el });
+    }
+    if (role === 'companies') {
+      body.add(mesh(cube(0.012, 0.06, 0.08), mat('#FFFFFF'), 0.066, 0.8, 0, false), mesh(cube(0.012, 0.17, 0.03), mat('#E8892B', 'tie'), 0.072, 0.69, 0, false));
+      arms[1].el.add(mesh(cube(0.05, 0.13, 0.17), mat('#6B4A2E'), 0, -0.27, 0)); // briefcase
+    }
+    if (role === 'faculty') {
+      body.add(mesh(cube(0.012, 0.06, 0.08), mat('#FFFFFF'), 0.066, 0.8, 0, false));
+      arms[0].el.add(mesh(cube(0.1, 0.13, 0.015), mat('#FFFFFF', 'notebook'), 0.04, -0.2, 0.03)); // notebook
+    }
+    if (role === 'students' && rand() < 0.55) body.add(mesh(cube(0.08, 0.2, 0.17), mat(pick(['#5B5770', '#C0504D', '#3B6E8F', '#E0A83A'])), -0.1, 0.68, 0)); // backpack
+    g.traverse(o => { if (o.isMesh) { o.userData.id = id; pickables.push(o); } });
+    scene.add(g);
+    const rig = { g, body, head, legs, arms, role, pose: 'idle', phase: rand() * 20 };
+    rigs.push(rig);
+    return rig;
+  }
+
+  // Poses: limbs hang along -y, so +z rotation swings them forward and -z bends a knee back.
+  function animate(r, t) {
+    const k = t + r.phase;
+    const gest = Math.pow(Math.max(0, Math.sin(k * 0.8)), 3); // an occasional hand gesture
+    let hip = [0, 0], knee = [0, 0], sh = [0.04, 0.04], el = [0.15, 0.15], y = 0, hy = Math.sin(k * 0.4) * 0.12, hz = 0;
+    switch (r.pose) {
+      case 'walk': { const s = Math.sin(k * 7.5); hip = [0.5 * s, -0.5 * s]; knee = [-Math.max(0, -s) * 0.8, -Math.max(0, s) * 0.8]; sh = [-0.4 * s, 0.4 * s]; el = [0.35, 0.35]; y = Math.abs(Math.cos(k * 7.5)) * 0.02; hy = 0; break; }
+      case 'sit': hip = [1.45, 1.45]; knee = [-1.4, -1.4]; y = -0.19; sh = [0.5, 0.5 + gest * 0.7]; el = [0.95, 0.95 - gest * 0.5]; hy = Math.sin(k * 0.5) * 0.45; break;
+      case 'talk': sh = [0.1, 0.15 + gest * 0.9]; el = [0.25, 0.3 + gest * 0.9]; hy = Math.sin(k * 0.6) * 0.3; break;
+      case 'listen': sh = [0.25, 0.25]; el = [0.9, 0.9]; hz = -Math.max(0, Math.sin(k * 1.4)) * 0.1; break;
+      case 'present': sh = [0.1 + gest * 0.5, 1.2]; el = [0.3 + gest * 0.6, 0.15]; hy = Math.sin(k * 0.7) * 0.45; break;
+    }
+    r.legs[0].hip.rotation.z = hip[0]; r.legs[1].hip.rotation.z = hip[1];
+    r.legs[0].knee.rotation.z = knee[0]; r.legs[1].knee.rotation.z = knee[1];
+    r.arms[0].sh.rotation.z = sh[0]; r.arms[1].sh.rotation.z = sh[1];
+    r.arms[0].el.rotation.z = el[0]; r.arms[1].el.rotation.z = el[1];
+    r.body.position.y = y; r.head.rotation.y = hy; r.head.rotation.z = hz;
+  }
+  const face = (g, to) => { g.rotation.y = Math.atan2(-(to.z - g.position.z), to.x - g.position.x); };
+
+  // Past teams: students seated on stools around a table, faculty mentor standing with them
+  const teams = {};
   const bulbMat = new THREE.MeshStandardMaterial({ color: '#FFE08A', emissive: '#FFC94A', emissiveIntensity: 0.9 });
   for (const [id, x, z] of TEAMS) {
     const c = at(x, z);
-    scene.add(mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.05, 24), mat('#FFFFFF'), c.x, 0.42, c.z));
-    scene.add(mesh(new THREE.CylinderGeometry(0.06, 0.1, 0.4, 8), mat('#B9B3C8'), c.x, 0.2, c.z));
+    scene.add(mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.05, 24), mat('#FFFFFF'), c.x, 0.44, c.z));
+    scene.add(mesh(new THREE.CylinderGeometry(0.06, 0.1, 0.42, 8), mat('#B9B3C8'), c.x, 0.21, c.z));
     for (const a of [0.6, 2.6, 4.4]) {
-      const lap = new THREE.Group(); lap.position.set(c.x + Math.cos(a) * 0.25, 0.45, c.z + Math.sin(a) * 0.25); lap.rotation.y = -a;
-      lap.add(mesh(new THREE.BoxGeometry(0.16, 0.012, 0.12), mat('#3B3650'), 0, 0, 0, false));
-      const scr = mesh(new THREE.BoxGeometry(0.012, 0.1, 0.12), mat('#7AA342', 'screen'), -0.08, 0.05, 0, false); lap.add(scr);
+      const lap = new THREE.Group(); lap.position.set(c.x + Math.cos(a) * 0.25, 0.47, c.z + Math.sin(a) * 0.25); lap.rotation.y = -a;
+      lap.add(mesh(cube(0.16, 0.012, 0.12), mat('#3B3650'), 0, 0, 0, false), mesh(cube(0.012, 0.1, 0.12), mat('#7AA342', 'screen'), -0.08, 0.05, 0, false));
       scene.add(lap);
     }
-    const members = [];
-    const n = id === 'kaleidosync' ? 4 : 5;
+    const n = id === 'kaleidosync' ? 3 : 4;
     for (let i = 0; i < n; i++) {
-      const a = (i / n) * Math.PI * 2 + 0.4, role = i === n - 1 && id !== 'kaleidosync' ? 'faculty' : 'students';
-      const p = person(role, id); p.position.set(c.x + Math.cos(a) * 0.9, 0, c.z + Math.sin(a) * 0.9);
-      facing(p, p.position, c); p.userData.base = p.rotation.y; p.userData.phase = rand() * 6;
-      members.push(p); discussing.push(p);
+      const a = (i / n) * Math.PI * 2 + 0.4;
+      scene.add(mesh(G('stool', () => new THREE.CylinderGeometry(0.1, 0.1, 0.26, 12)), mat('#B98A55'), c.x + Math.cos(a) * 0.95, 0.13, c.z + Math.sin(a) * 0.95));
+      const r = person('students', id); r.g.position.set(c.x + Math.cos(a) * 0.95, 0, c.z + Math.sin(a) * 0.95); face(r.g, c); r.pose = 'sit';
     }
-    const bulb = new THREE.Group(); bulb.position.set(c.x, 1.55, c.z);
+    if (id !== 'kaleidosync') { const f = person('faculty', id); const a = 0.4 + Math.PI / n; f.g.position.set(c.x + Math.cos(a) * 1.15, 0, c.z + Math.sin(a) * 1.15); face(f.g, c); f.pose = 'listen'; }
+    const bulb = new THREE.Group(); bulb.position.set(c.x, 1.65, c.z);
     bulb.add(mesh(new THREE.SphereGeometry(0.17, 16, 12), bulbMat, 0, 0, 0, false), mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.1, 10), mat('#B9B3C8'), 0, -0.17, 0, false));
     bulb.traverse(o => { if (o.isMesh) { o.userData.id = id; pickables.push(o); } });
     scene.add(bulb);
-    teams[id] = { c, bulb, top: new THREE.Vector3(c.x, 2.0, c.z), r: 1.35 };
+    teams[id] = { c, bulb, top: new THREE.Vector3(c.x, 2.1, c.z), r: 1.45 };
+  }
+  // Students chatting on benches
+  for (const [x, z, rot] of BENCHES) for (const s of [-0.25, 0.25]) {
+    const r = person('students', 'students'); r.g.position.copy(at(x + (rot ? 0 : s), z + (rot ? s : 0))); r.g.rotation.y = rot ? Math.PI : -Math.PI / 2; r.pose = 'sit';
   }
 
-  // Demo Day: a presenter, screen and an audience of faculty + company mentors beside the auditorium
-  const screen = new THREE.Group(); screen.position.copy(at(18.4, 23.6));
-  screen.add(mesh(new THREE.BoxGeometry(1.7, 1.0, 0.06), mat('#66518A'), 0, 1.0, 0), mesh(new THREE.BoxGeometry(1.5, 0.82, 0.02), mat('#FFFFFF'), 0, 1.0, 0.04, false));
-  screen.add(mesh(new THREE.BoxGeometry(0.06, 0.5, 0.06), mat('#5B5770'), -0.6, 0.25, 0), mesh(new THREE.BoxGeometry(0.06, 0.5, 0.06), mat('#5B5770'), 0.6, 0.25, 0));
-  screen.add(mesh(new THREE.BoxGeometry(0.9, 0.08, 0.02), mat('#7AA342', 'slide1'), -0.1, 1.2, 0.06, false), mesh(new THREE.BoxGeometry(0.6, 0.06, 0.02), mat('#E8892B', 'slide2'), -0.25, 1.02, 0.06, false), mesh(new THREE.BoxGeometry(1.0, 0.06, 0.02), mat('#CFDAEE', 'slide3'), -0.05, 0.86, 0.06, false));
+  // Demo Day screen beside the auditorium (front faces the audience on its +z side)
+  const screen = new THREE.Group(); screen.position.copy(at(18.1, 22.3));
+  screen.add(mesh(cube(1.7, 1.0, 0.06), mat('#66518A'), 0, 1.0, 0), mesh(cube(1.5, 0.82, 0.02), mat('#FFFFFF'), 0, 1.0, 0.04, false));
+  screen.add(mesh(cube(0.06, 0.5, 0.06), mat('#5B5770'), -0.6, 0.25, 0), mesh(cube(0.06, 0.5, 0.06), mat('#5B5770'), 0.6, 0.25, 0));
+  screen.add(mesh(cube(0.9, 0.08, 0.02), mat('#7AA342', 'slide1'), -0.1, 1.2, 0.06, false), mesh(cube(0.6, 0.06, 0.02), mat('#E8892B', 'slide2'), -0.25, 1.02, 0.06, false), mesh(cube(1.0, 0.06, 0.02), mat('#CFDAEE', 'slide3'), -0.05, 0.86, 0.06, false));
   screen.traverse(o => { if (o.isMesh) { o.userData.id = 'solution'; pickables.push(o); } });
   scene.add(screen);
-  const presenter = person('students', 'solution'); presenter.position.copy(at(19.5, 23.9)); facing(presenter, presenter.position, at(19.5, 21.5));
-  [[17.6, 21.4, 'companies'], [18.4, 21.2, 'faculty'], [19.2, 21.3, 'companies'], [18.0, 20.6, 'students'], [18.9, 20.6, 'students']].forEach(([x, z, role]) => {
-    const p = person(role, role); p.position.copy(at(x, z)); facing(p, p.position, at(18.4, 23.6)); discussing.push(p); p.userData.base = p.rotation.y; p.userData.phase = rand() * 6;
-  });
-  // students relaxing on benches
-  for (const [x, z, r] of BENCHES) for (const s of [-0.25, 0.25]) {
-    const p = person('students', 'students'); p.position.copy(at(x + (r ? 0 : s), z + (r ? s : 0), 0.05)); p.scale.y *= 0.85; p.rotation.y = r ? Math.PI : -Math.PI / 2;
-    p.userData.base = p.rotation.y; p.userData.phase = rand() * 6; discussing.push(p);
-  }
 
-  /* ---------- Walkers ---------- */
-  const route = (pts, loop = false) => {
-    const P = pts.map(([x, z]) => at(x, z)); if (loop) P.push(P[0].clone());
-    const L = [0]; for (let i = 1; i < P.length; i++) L.push(L[i - 1] + P[i].distanceTo(P[i - 1]));
-    return { P, L, total: L[L.length - 1], loop };
-  };
-  const sample = (r, s, out) => {
-    let i = 0; while (i < r.L.length - 2 && r.L[i + 1] < s) i++;
-    const k = (s - r.L[i]) / (r.L[i + 1] - r.L[i] || 1);
-    out.lerpVectors(r.P[i], r.P[i + 1], k);
-    return r.P[i + 1].clone().sub(r.P[i]);
-  };
-  const walkers = [];
-  const cardGeo = new THREE.BoxGeometry(0.42, 0.3, 0.02), cardMat = { go: mat('#F0973A', 'card-go'), back: mat('#7AA342', 'card-back') };
-  function walker(role, id, r, speed, s0 = 0, pause = 0) {
-    const g = person(role, id);
-    const w = { g, r, speed, s: s0 * r.total, dir: 1, wait: 0, pause, phase: rand() * 6 };
-    if (role === 'companies') { // problem card (orange) going in, solution card (green) coming back
-      w.card = new THREE.Mesh(cardGeo, cardMat.go); w.card.castShadow = true; w.card.userData.id = id; pickables.push(w.card); scene.add(w.card);
-    }
-    walkers.push(w); return w;
+  /* ---------- The live project: one group walks the GCL process, stage by stage ---------- */
+  // Each stage: where the group gathers (`spot` cells per actor) and what they look at.
+  // Actors: [company mentor, faculty mentor, student, student, student]
+  const STAGE_IDS = ['challenge', 'stakeholders', 'journey', 'insights', 'prototype', 'solution'];
+  const BEATS = [
+    // Stage 1: mentor + faculty meet at the gate; students wait at the studio (their own door). `focus` = who the caption follows.
+    { door: [3.7, 3.7], look: [0.3, 0.2], spots: [[2.0, 3.95], [2.75, 3.3], [8.0, 2.35], [8.6, 2.15], [9.15, 2.45]], doors: [null, null, [8.5, 3.7], [8.5, 3.7], [8.5, 3.7]], focus: [0, 1], poses: ['talk', 'listen', 'talk', 'listen', 'talk'] },
+    { door: [8.5, 3.7], look: [8.5, 0.6], spots: [[7.5, 2.85], [9.6, 2.85], [8.0, 2.35], [8.6, 2.15], [9.15, 2.45]], poses: ['talk', 'listen', 'talk', 'listen', 'talk'] },
+    { door: [14.5, 3.7], look: [14.5, 0.6], spots: [[12.9, 3.0], [15.6, 2.85], [14.0, 2.35], [14.6, 2.15], [15.1, 2.45]], poses: ['listen', 'listen', 'talk', 'talk', 'listen'] },
+    // East buildings: gather on their south side, which faces the camera
+    { door: [20.3, 10.2], look: [23.2, 7.7], spots: [[23.95, 10.65], [21.3, 10.5], [22.2, 10.2], [22.75, 10.05], [23.3, 10.1]], poses: ['listen', 'listen', 'present', 'talk', 'talk'] },
+    { door: [20.3, 16.7], look: [23.2, 14.1], spots: [[23.95, 17.05], [21.3, 16.9], [22.2, 16.6], [22.75, 16.45], [23.3, 16.5]], poses: ['talk', 'listen', 'present', 'talk', 'listen'] },
+    { door: [18.4, 20.3], look: [18.1, 22.3], spots: [[17.7, 24.0], [18.5, 24.1], [16.9, 22.75], [19.3, 22.75], [19.95, 22.9]], poses: ['listen', 'listen', 'present', 'present', 'listen'] },
+  ];
+  const SPAWN = [-5, 3.7];
+  const LOOPC = [[3.7, 3.7], [20.3, 3.7], [20.3, 20.3], [3.7, 20.3]], SIDE = 16.6, PER = SIDE * 4;
+  const sOf = ([x, z]) => z <= 3.71 ? x - 3.7 : x >= 20.29 ? SIDE + z - 3.7 : z >= 20.29 ? 2 * SIDE + 20.3 - x : 3 * SIDE + 20.3 - z;
+  // Walk along the path loop from one building's door to another's, taking the shorter way round.
+  function arc(a, b) {
+    const sa = sOf(a), sb = sOf(b); let d = ((sb - sa) % PER + PER) % PER; const fwd = d <= PER / 2; if (!fwd) d = PER - d;
+    const rel = cs => fwd ? ((cs - sa) % PER + PER) % PER : ((sa - cs) % PER + PER) % PER;
+    const corners = LOOPC.map((p, i) => [rel(i * SIDE), p]).filter(([r]) => r > 0.01 && r < d - 0.01).sort((x, y) => x[0] - y[0]).map(([, p]) => p);
+    return [a, ...corners, b];
   }
-  const GATE = [-4.5, 3.7], IN = [3.7, 3.7];
-  walker('companies', 'rep:idfc', route([GATE, IN, [6.6, 6.6]]), 1.1, 0.0, 2.5);
-  walker('companies', 'rep:deloitte', route([GATE, IN, [12, 3.7], [12, 6.9], [15.4, 6.9]]), 1.1, 0.35, 2.5);
-  walker('companies', 'rep:govardhan', route([GATE, IN, [3.7, 15.6], [6.6, 15.6]]), 1.0, 0.7, 2.5);
-  walker('companies', 'rep:aurapay', route([GATE, IN, [12, 3.7], [12, 12], [15.4, 15.4]]), 1.1, 0.5, 2.5);
-  walker('companies', 'rep:kaleidosync', route([GATE, IN, [3.7, 12.5], [1.6, 13.6]]), 1.0, 0.15, 2.5);
-  const LOOP = [[3.7, 3.7], [20.3, 3.7], [20.3, 20.3], [3.7, 20.3]];
-  walker('faculty', 'faculty', route(LOOP, true), 0.8, 0.1);
-  walker('faculty', 'faculty', route([[8.5, 2.1], [12, 3.7], [12, 12], [20.3, 12], [21.6, 9.5]]), 0.8, 0.4, 2);
-  walker('faculty', 'faculty', route([[6.8, 21.3], [6.8, 20.3], [12, 20.3], [12, 12], [7.6, 9]]), 0.75, 0.2, 2);
-  for (let i = 0; i < 6; i++) walker('students', 'students', route(i % 2 ? LOOP : [...LOOP].reverse(), true), 0.9 + rand() * 0.4, i / 6);
-  walker('students', 'students', route([[12, 4.4], [12, 19.6]]), 1.0, 0.3, 1.5);
-  walker('students', 'students', route([[4.4, 12], [19.6, 12]]), 0.9, 0.6, 1.5);
-  walker('students', 'students', route([[20.3, 12], [21.6, 14.1]]), 0.7, 0, 3);
+  const cardGeo = new THREE.BoxGeometry(0.42, 0.3, 0.02), cardMat = { problem: mat('#F0973A', 'card-go'), solution: mat('#7AA342', 'card-back') };
+  const actor = (role, id, shirt) => { const r = person(role, id, shirt); return { r, path: null, s: 0, total: 0, door: null }; };
+  const mentors = [actor('companies', 'companies'), actor('companies', 'companies')];
+  for (const m of mentors) { m.card = new THREE.Mesh(cardGeo, cardMat.problem); m.card.castShadow = true; m.card.userData.id = 'companies'; pickables.push(m.card); scene.add(m.card); }
+  const crew = [actor('faculty', 'faculty'), actor('students', 'students', '#3FA796'), actor('students', 'students', '#F2C14E'), actor('students', 'students', '#5E8DD0')];
+  const place = (a, cell, door) => { a.r.g.position.copy(at(...cell)); a.door = door; a.path = null; a.r.pose = 'idle'; };
+  place(crew[0], BEATS[0].spots[1], BEATS[0].door);
+  crew.slice(1).forEach((a, i) => place(a, BEATS[1].spots[i + 2], BEATS[1].door));
+  mentors.forEach(m => { place(m, SPAWN, 'spawn'); m.r.g.visible = m.card.visible = false; });
 
-  const tmp = new THREE.Vector3();
-  function stepWalker(w, dt, t) {
-    if (w.wait > 0) { w.wait -= dt; w.g.userData.inner.position.y = 0; }
+  function walkTo(a, cell, door) {
+    const from = a.r.g.position.clone(), pts = [from];
+    if (a.door === 'spawn' && door !== 'spawn' && sOf(door) === 0) door = 'gate'; // arriving guest stops inside the arch
+    const enter = a.door === 'spawn' ? [[SPAWN[0] + 1, SPAWN[1]], LOOPC[0]] : [a.door];
+    if (door === 'gate') { pts.push(at(...cell)); door = BEATS[0].door; }
     else {
-      w.s += w.dir * w.speed * dt;
-      if (w.r.loop) w.s = ((w.s % w.r.total) + w.r.total) % w.r.total;
-      else if (w.s >= w.r.total) { w.s = w.r.total; w.dir = -1; w.wait = w.pause; if (w.card) w.card.material = cardMat.back; }
-      else if (w.s <= 0) { w.s = 0; w.dir = 1; w.wait = w.pause; if (w.card) w.card.material = cardMat.go; }
-      w.g.userData.inner.position.y = Math.abs(Math.sin(t * 9 + w.phase)) * 0.05;
+      const leave = door === 'spawn' ? [LOOPC[0], SPAWN] : [door];
+      for (const c of [...enter.slice(0, -1), ...arc(enter[enter.length - 1], leave[0]), ...leave.slice(1)]) pts.push(at(...c));
+      if (door !== 'spawn') pts.push(at(...cell));
     }
-    const d = sample(w.r, w.s, tmp).multiplyScalar(w.dir);
-    w.g.position.copy(tmp);
-    if (d.lengthSq() > 0) w.g.rotation.y = Math.atan2(-d.z, d.x);
-    if (w.card) { w.card.position.copy(w.g.position).setY(1.35 + Math.sin(t * 3 + w.phase) * 0.04); w.card.quaternion.copy(camera.quaternion); }
+    const L = [0]; for (let i = 1; i < pts.length; i++) L.push(L[i - 1] + pts[i].distanceTo(pts[i - 1]));
+    Object.assign(a, { path: pts, L, s: 0, total: L[L.length - 1], door, target: cell });
+    if (reduceMotion) a.s = a.total;
+    a.r.pose = 'walk';
+  }
+  const tmpV = new THREE.Vector3();
+  function stepActor(a, dt) {
+    if (!a.path) return true;
+    a.s = Math.min(a.total, a.s + 1.6 * dt);
+    let i = 0; while (i < a.L.length - 2 && a.L[i + 1] < a.s) i++;
+    const seg = a.L[i + 1] - a.L[i] || 1;
+    tmpV.lerpVectors(a.path[i], a.path[i + 1], (a.s - a.L[i]) / seg);
+    const d = a.path[i + 1].clone().sub(a.path[i]);
+    a.r.g.position.copy(tmpV);
+    if (d.lengthSq() > 1e-6) a.r.g.rotation.y = Math.atan2(-d.z, d.x);
+    if (a.s >= a.total) { a.path = null; return true; }
+    return false;
+  }
+
+  let beat = 0, loopN = 0, phase = 'walk', dwell = 0, mentor = mentors[0];
+  const project = () => TEAMS[loopN % TEAMS.length][0];
+  function startBeat(i) {
+    beat = i; phase = 'walk';
+    const b = BEATS[i];
+    if (i === 0) { // a new company arrives; the previous one heads home with its solution
+      const prev = mentor; mentor = mentors[loopN % 2];
+      if (prev !== mentor && prev.r.g.visible) walkTo(prev, null, 'spawn');
+      place(mentor, SPAWN, 'spawn'); mentor.r.g.visible = mentor.card.visible = true; mentor.card.material = cardMat.problem;
+    }
+    const cast = [mentor, ...crew];
+    cast.forEach((a, k) => { if (b.spots[k]) walkTo(a, b.spots[k], b.doors?.[k] || b.door); });
+    onStory?.(STAGE_IDS[i], project());
+  }
+  function updateStory(dt) {
+    let arrived = true;
+    for (const m of mentors) if (m !== mentor && m.path) { if (stepActor(m, dt)) m.r.g.visible = m.card.visible = false; }
+    [mentor, ...crew].forEach(a => { if (!stepActor(a, dt)) arrived = false; });
+    if (phase === 'walk' && arrived) {
+      phase = 'dwell'; dwell = beat === 5 ? 8 : 6.5;
+      const b = BEATS[beat], look = at(...b.look);
+      [mentor, ...crew].forEach((a, k) => { if (!b.spots[k]) return; a.r.pose = b.poses[k] || 'listen'; face(a.r.g, k > 1 && beat > 2 ? at(...b.spots[0]) : k > 1 && beat === 0 ? at(...BEATS[1].look) : look); });
+      if (beat === 0) face(mentor.r.g, crew[0].r.g.position), face(crew[0].r.g, mentor.r.g.position);
+      if (beat === 5) [crew[1], crew[2]].forEach(a => face(a.r.g, at(18.1, 24.1)));
+    } else if (phase === 'dwell') {
+      dwell -= dt;
+      if (beat === 5 && dwell < 4) mentor.card.material = cardMat.solution; // the problem card becomes a solution
+      if (dwell <= 0) { if (beat === 5) { loopN++; startBeat(0); } else startBeat(beat + 1); }
+    }
+  }
+  const storyAnchor = new THREE.Vector3();
+  function groupCentre() {
+    const b = BEATS[beat]; storyAnchor.set(0, 0, 0); let n = 0;
+    [mentor, ...crew].forEach((a, k) => { if (b.spots[k] && (!b.focus || b.focus.includes(k))) { storyAnchor.add(a.r.g.position); n++; } });
+    return storyAnchor.divideScalar(n).setY(1.75);
   }
 
   /* ---------- Selection ---------- */
@@ -260,7 +354,7 @@ export function createScene(canvas, labelsEl, { onSelect, reduceMotion }) {
   pt.rotation.x = Math.PI; pin.add(ph, pt); marker.add(pin);
   const ring = new THREE.Mesh(new THREE.RingGeometry(1, 1.1, 56), new THREE.MeshBasicMaterial({ color: '#66518A', transparent: true, opacity: 0.6 }));
   ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04; ring.visible = false; scene.add(ring);
-  let outline = null, selected = null, followed = null, glowRole = null; // followed: the walker a rep:* selection tracks
+  let outline = null, selected = null, glowRole = null;
   const clearOutline = () => { if (outline) { outline.parent.remove(outline); outline.geometry.dispose(); outline = null; } };
 
   function select(id, { fly = true } = {}) {
@@ -268,8 +362,7 @@ export function createScene(canvas, labelsEl, { onSelect, reduceMotion }) {
     glowRole = roleMats[id] ? id : null;
     for (const set of Object.values(roleMats)) for (const m of set) m.emissive.set('#000000');
     const o = objects[id], tm = teams[id];
-    followed = walkers.find(w => w.card && w.card.userData.id === id) || null;
-    ring.visible = !!(o || tm); marker.visible = !!(o || tm || followed);
+    ring.visible = !!(o || tm); marker.visible = !!(o || tm);
     if (o) {
       outline = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(o.size.x + 0.14, o.size.y, o.size.z + 0.14)), new THREE.LineBasicMaterial({ color: '#66518A' }));
       outline.position.y = o.size.y / 2; o.group.add(outline);
@@ -278,8 +371,6 @@ export function createScene(canvas, labelsEl, { onSelect, reduceMotion }) {
     } else if (tm) {
       marker.position.copy(tm.top); ring.position.set(tm.c.x, 0.04, tm.c.z); ring.scale.setScalar(tm.r);
       if (fly) flyTo(tm.c, Math.max(camera.zoom, 2.4));
-    } else if (followed) {
-      if (fly) flyTo(followed.g.position, Math.max(camera.zoom, 2.2));
     } else if (glowRole && fly) tween(framed(HOME, 0.84), 0.84);
   }
 
@@ -323,8 +414,12 @@ export function createScene(canvas, labelsEl, { onSelect, reduceMotion }) {
     canvas.style.cursor = id ? 'pointer' : '';
   });
 
-  // HTML labels pinned to 3D anchors
+  // HTML labels pinned to 3D anchors; the story label follows the live-project group
   const labels = [];
+  const storyEl = document.createElement('button');
+  storyEl.className = 'maplabel story'; storyEl.type = 'button';
+  storyEl.addEventListener('click', () => onSelect(STAGE_IDS[beat]));
+  labelsEl.append(storyEl);
   function addLabel(id, html, cls) {
     const el = document.createElement('button');
     el.className = 'maplabel ' + cls; el.innerHTML = html; el.type = 'button';
@@ -345,7 +440,7 @@ export function createScene(canvas, labelsEl, { onSelect, reduceMotion }) {
   { const t = framed(HOME, 0.84); camera.position.add(t.clone().sub(controls.target)); controls.target.copy(t); controls.update(); }
 
   const v = new THREE.Vector3(), clock = new THREE.Clock(), BOUND = 13;
-  for (const w of walkers) stepWalker(w, 0, 0);
+  queueMicrotask(() => startBeat(0)); // after createScene returns, so the caller can use the returned API in onStory
   renderer.setAnimationLoop(() => {
     const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
     if (anim) {
@@ -364,9 +459,7 @@ export function createScene(canvas, labelsEl, { onSelect, reduceMotion }) {
     controls.update();
 
     if (!reduceMotion) {
-      for (const w of walkers) stepWalker(w, dt, t);
-      for (const p of discussing) { p.rotation.y = p.userData.base + Math.sin(t * 1.3 + p.userData.phase) * 0.35; p.userData.inner.position.y = Math.max(0, Math.sin(t * 2.2 + p.userData.phase)) * 0.025; }
-      for (const tm of Object.values(teams)) tm.bulb.position.y = 1.55 + Math.sin(t * 2 + tm.c.x) * 0.07;
+      for (const tm of Object.values(teams)) tm.bulb.position.y = 1.65 + Math.sin(t * 2 + tm.c.x) * 0.07;
       bulbMat.emissiveIntensity = 0.7 + Math.sin(t * 3) * 0.25;
       spout.scale.setScalar(1 + Math.sin(t * 4) * 0.12);
       if (flagMesh) flagMesh.rotation.y = Math.sin(t * 2.5) * 0.25;
@@ -374,7 +467,9 @@ export function createScene(canvas, labelsEl, { onSelect, reduceMotion }) {
       ring.material.opacity = 0.35 + Math.sin(t * 2.4) * 0.25;
       if (glowRole) for (const m of roleMats[glowRole]) m.emissive.set(ROLE_COLOUR[glowRole]).multiplyScalar(0.25 + Math.sin(t * 4) * 0.2);
     }
-    if (followed) marker.position.copy(followed.g.position).setY(1.7);
+    updateStory(dt);
+    for (const r of rigs) if (r.g.visible) animate(r, reduceMotion ? 0 : t);
+    for (const m of mentors) if (m.card.visible) { m.card.position.copy(m.r.g.position).setY(1.38 + Math.sin(t * 3) * 0.03); m.card.quaternion.copy(camera.quaternion); }
 
     renderer.render(scene, camera);
     const w = canvas.clientWidth, h = canvas.clientHeight;
@@ -383,10 +478,12 @@ export function createScene(canvas, labelsEl, { onSelect, reduceMotion }) {
       l.el.style.transform = `translate(${((v.x + 1) / 2 * w).toFixed(1)}px, ${((1 - v.y) / 2 * h).toFixed(1)}px) translate(-50%, -100%)`;
       l.el.classList.toggle('on', l.id === selected);
     }
+    v.copy(groupCentre()).project(camera);
+    storyEl.style.transform = `translate(${((v.x + 1) / 2 * w).toFixed(1)}px, ${((1 - v.y) / 2 * h).toFixed(1)}px) translate(-50%, -100%)`;
   });
 
   return {
-    select, addLabel,
+    select, addLabel, storyEl,
     zoom: f => tween(controls.target.clone(), THREE.MathUtils.clamp(camera.zoom * f, controls.minZoom, controls.maxZoom)),
     spin: deg => tween(controls.target.clone(), camera.zoom, offset().applyAxisAngle(new THREE.Vector3(0, 1, 0), THREE.MathUtils.degToRad(deg))),
     home: () => tween(framed(HOME, 0.84), 0.84, OFFSET.clone()),

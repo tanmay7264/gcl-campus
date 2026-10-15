@@ -14,6 +14,7 @@ const ms = name => `<span class="ms">${name}</span>`;
 let map = null;          // 3D scene API (null without WebGL)
 let current = null;      // selected id: stage, project (= its student team), people group, or "rep:<project>" (company mentor)
 let tab = 'projects';
+let story = null;        // { stage, project } of the live project walking the campus
 
 /* ---------- Selection ---------- */
 function select(id, { fly = true } = {}) {
@@ -96,18 +97,19 @@ function renderInspector() {
 
 /* ---------- Tracker ---------- */
 function renderTracker() {
-  const si = S[current]?.i ?? (P[current?.replace('rep:', '')] ? STAGES.length : -1); // a project = journey complete
+  const live = !current && story; // nothing selected: the tracker follows the live project
+  const si = live ? S[story.stage].i : S[current]?.i ?? (P[current?.replace('rep:', '')] ? STAGES.length : -1); // a project = journey complete
   $('#steps').innerHTML = STAGES.map((s, i) => {
     const st = i < si ? 'done' : i === si ? 'active' : 'todo';
     return `<li class="${st}"><button data-select="${s.id}" aria-current="${st === 'active' ? 'step' : 'false'}">
       <span class="dot">${st === 'done' ? ms('check') : s.num}</span><b>${s.short}</b>
-      <small>${st === 'active' ? 'You are here' : s.term.split(' · ')[0].replace('Trimester', 'Trim')}</small></button></li>`;
+      <small>${st === 'active' ? (live ? 'Live now' : 'You are here') : s.term.split(' · ')[0].replace('Trimester', 'Trim')}</small></button></li>`;
   }).join('');
-  const p = P[current?.replace('rep:', '')] || P[S[current]?.eg] || P.idfc;
-  $('#trackSub').textContent = `#GCL-${p.id.toUpperCase()} · ${p.title}`;
+  const p = live ? P[story.project] : P[current?.replace('rep:', '')] || P[S[current]?.eg] || P.idfc;
+  $('#trackSub').textContent = live ? `● Live · ${p.org} · ${S[story.stage].live}` : `#GCL-${p.id.toUpperCase()} · ${p.title}`;
   $('#current').dataset.select = p.id;
   $('#current').innerHTML = `<span class="tile lg" style="background:${PCOLOR[p.id]}">${p.org.slice(0, 3).toUpperCase()}</span>
-    <span><b>#GCL-${p.id.toUpperCase()}</b><small>${p.org}</small><span class="chip green">${current && S[current] ? 'Example for this stage' : 'Completed project'}</span></span>${ms('chevron_right')}`;
+    <span><b>#GCL-${p.id.toUpperCase()}</b><small>${p.org}</small><span class="chip ${live ? 'orange' : 'green'}">${live ? S[story.stage].short + ' in progress' : current && S[current] ? 'Example for this stage' : 'Completed project'}</span></span>${ms('chevron_right')}`;
 }
 
 /* ---------- List tabs + search ---------- */
@@ -175,7 +177,15 @@ const initial = location.hash.slice(1) || null;
 select(initial, { fly: false });
 
 import('./scene.js').then(({ createScene }) => {
-  map = createScene($('#scene'), $('#labels'), { onSelect: id => select(id), reduceMotion });
+  map = createScene($('#scene'), $('#labels'), {
+    onSelect: id => select(id), reduceMotion,
+    onStory: (stage, project) => {
+      story = { stage, project };
+      const s = S[stage], p = P[project];
+      map.storyEl.innerHTML = `<span class="live-dot"></span><span><b>${p.org} · ${s.short}</b><small>${s.live}</small></span>`;
+      if (!current) renderTracker();
+    },
+  });
   STAGES.forEach(s => map.addLabel(s.id, `<i class="${s.id === 'challenge' ? 'orange' : ''}">${s.num}</i>${s.building}`, 'stage'));
   PROJECTS.forEach(p => map.addLabel(p.id, `${ms('groups')}${p.org}`, 'project'));
   map.addLabel('about', `${ms('account_balance')}WeSchool Main Block`, 'project');
