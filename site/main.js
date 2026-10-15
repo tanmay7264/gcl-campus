@@ -21,6 +21,7 @@ function select(id, { fly = true } = {}) {
   if (id && !S[id] && !P[id] && !PEOPLE[id] && !(id.startsWith('rep:') && P[id.slice(4)])) id = null;
   current = id;
   map?.select(id, { fly });
+  if (P[id]) map?.watch(id); // picking a project starts (or keeps) its live feed
   renderInspector(); renderTracker(); renderRows();
   history.replaceState(null, '', id ? '#' + id.replace('rep:', '') : location.pathname);
 }
@@ -69,11 +70,11 @@ function renderInspector() {
   if (p) {
     insp.innerHTML = `
       ${head(p.org[0], PCOLOR[p.id], 'PARTNER PROJECT · ' + p.domain.toUpperCase(), p.title, p.org)}
-      <div class="status">${rep ? '<span class="chip orange">Sharing the challenge</span><span class="muted">Company mentor visiting the team</span>' : '<span class="chip green">Live project · completed</span><span class="muted">Student team at work</span>'}</div>
+      <div class="status">${story?.project === p.id ? `<span class="chip orange">● Live feed playing</span><span class="muted">${S[story.stage].short} · watch the team on the map</span>` : '<span class="chip green">Live project · completed</span><span class="muted">Student team at work</span>'}</div>
       <button class="thumb" data-poster="${p.id}"><img src="${p.image}" alt="${p.org} project poster"><span>${ms('open_in_full')} View poster</span></button>
       ${rows([['Challenge', p.challenge], ['Stakeholders', p.stakeholders], ['Insight', p.insight], ['Prototype', p.prototype], ['Solution', p.outcome]])}
       <p class="team">${ms('groups')}<span>${p.team}${p.mentor ? '<br>' + p.mentor : ''}</span></p>
-      <div class="actions"><button class="btn primary" data-poster="${p.id}">${ms('image')}View poster</button><button class="btn soft" data-action="form">Bring us a challenge like this</button></div>`;
+      <div class="actions"><button class="btn primary" data-action="replay">${ms('replay')}Replay from start</button><button class="btn soft" data-poster="${p.id}">${ms('image')}View poster</button></div>`;
     insp.querySelector('.rows').classList.add('stack');
     return;
   }
@@ -98,7 +99,7 @@ function renderInspector() {
 /* ---------- Tracker ---------- */
 const WHO = { companies: ['Company', '#E8892B'], faculty: ['Faculty', '#66518A'], students: ['Students', '#3FA796'] };
 function renderTracker() {
-  const live = !current && story; // nothing selected: the tracker narrates the featured company's live project
+  const live = story && (!current || current === story.project); // narrate the live project when nothing else is selected
   const si = live ? S[story.stage].i : S[current]?.i ?? (P[current?.replace('rep:', '')] ? STAGES.length : -1); // a project = journey complete
   const walking = live && story.phase === 'walk';
   $('#steps').innerHTML = STAGES.map((s, i) => {
@@ -131,7 +132,7 @@ function renderTracker() {
 
 /* ---------- List tabs + search ---------- */
 const rowStage = s => `<li><button data-select="${s.id}" class="${current === s.id ? 'on' : ''}"><span class="tile" style="background:${s.id === 'challenge' ? '#F0973A' : '#7AA342'}">${s.num}</span><span><b>${s.title}</b><small>${s.building} · ${s.term}</small></span><span class="chip">${s.role ? '★ You' : 'Students'}</span></button></li>`;
-const rowProject = p => { const f = story?.project === p.id; return `<li><button data-select="${p.id}" class="${current === p.id ? 'on' : ''} ${f ? 'featured' : ''}"><span class="tile" style="background:${PCOLOR[p.id]}">${p.org[0]}</span><span><b>${p.org}</b><small>${f ? 'Live now · ' + S[story.stage].short : p.title}</small></span><span class="chip ${f ? 'orange' : ''}">${f ? '● Live' : p.domain.split(' · ')[0]}</span></button></li>`; };
+const rowProject = p => { const f = story?.project === p.id; return `<li><button data-select="${p.id}" class="${current === p.id ? 'on' : ''} ${f ? 'featured' : ''}"><span class="tile" style="background:${PCOLOR[p.id]}">${p.org[0]}</span><span><b>${p.org}</b><small>${f ? 'Live now · ' + S[story.stage].short : p.title}</small></span><span class="chip ${f ? 'orange' : 'watchable'}">${f ? '● Live' : `<span class="dom">${p.domain.split(' · ')[0]}</span><span class="watch">▶ Watch live</span>`}</span></button></li>`; };
 const rowRole = s => `<li><button data-select="${s.id}" class="${current === s.id ? 'on' : ''}"><span class="tile" style="background:#F0973A">${ms('star')}</span><span><b>${s.role}</b><small>${s.title} · ${s.term}</small></span></button></li>`;
 function renderRows() {
   const q = $('#search').value.trim().toLowerCase();
@@ -160,6 +161,7 @@ document.addEventListener('click', e => {
     close: () => select(null),
     zoomin: () => map?.zoom(1.35), zoomout: () => map?.zoom(1 / 1.35),
     spin: () => map?.spin(90), home: () => { map?.home(); },
+    replay: () => { map?.watch(current, true); renderInspector(); },
   })[t.dataset.action]?.();
 });
 for (const d of [formDrawer, posterModal]) d.addEventListener('click', e => { if (e.target === d) d.close(); });
@@ -202,14 +204,15 @@ import('./scene.js').then(({ createScene }) => {
       const s = S[ev.stage], p = P[ev.project];
       map.storyEl.innerHTML = `<span class="live-dot"></span><span><b>${p.org}</b><small>${ev.phase === 'walk' ? 'Walking to ' + s.building : s.short + ' · ' + s.building}</small></span>`;
       document.querySelectorAll('.maplabel[data-id]').forEach(l => l.classList.toggle('featured', l.dataset.id === ev.project));
-      if (!current) renderTracker();
+      if (!current || P[current]) renderTracker();
       if (changed || tab === 'projects') renderRows();
+      if (P[current] && (changed || current === ev.project)) { const sc = insp.scrollTop; renderInspector(); insp.scrollTop = sc; insp.classList.remove('enter'); }
     },
   });
   STAGES.forEach(s => map.addLabel(s.id, `<i class="${s.id === 'challenge' ? 'orange' : ''}">${s.num}</i>${s.building}`, 'stage'));
   PROJECTS.forEach(p => map.addLabel(p.id, `${ms('groups')}${p.org}`, 'project'));
   map.addLabel('about', `${ms('account_balance')}WeSchool Main Block`, 'project');
-  if (current) map.select(current);
+  if (current) { map.select(current); if (P[current]) map.watch(current); }
 }).catch(err => {
   console.warn('3D campus disabled:', err);
   document.body.classList.add('no-webgl'); $('.nogl').hidden = false;

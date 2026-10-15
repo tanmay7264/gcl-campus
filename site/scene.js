@@ -310,13 +310,13 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, reduceMotion 
     return false;
   }
 
-  let beat = 0, loopN = 0, phase = 'walk', dwell = 0, mentor = mentors[0];
+  let beat = 0, loopN = 0, phase = 'walk', dwell = 0, mentor = mentors[0], follow = false;
   const project = () => TEAMS[loopN % TEAMS.length][0];
   function startBeat(i) {
     beat = i; phase = 'walk';
     const b = BEATS[i];
     if (i === 0) { // a new company arrives; the previous one heads home with its solution
-      const prev = mentor; mentor = mentors[loopN % 2];
+      const prev = mentor; mentor = mentors[mentors[0] === prev ? 1 : 0];
       if (prev !== mentor && prev.r.g.visible) walkTo(prev, null, 'spawn');
       place(mentor, SPAWN, 'spawn'); mentor.r.g.visible = mentor.card.visible = true; mentor.card.material = cardMat.problem;
     }
@@ -364,7 +364,7 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, reduceMotion 
   const clearOutline = () => { if (outline) { outline.parent.remove(outline); outline.geometry.dispose(); outline = null; } };
 
   function select(id, { fly = true } = {}) {
-    selected = id; clearOutline();
+    selected = id; clearOutline(); follow = false;
     glowRole = roleMats[id] ? id : null;
     for (const set of Object.values(roleMats)) for (const m of set) m.emissive.set('#000000');
     const o = objects[id], tm = teams[id];
@@ -375,7 +375,7 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, reduceMotion 
       marker.position.copy(o.top); ring.position.set(o.group.position.x, 0.04, o.group.position.z); ring.scale.setScalar(o.r);
       if (fly) flyTo(o.group.position, Math.max(camera.zoom, 1.5));
     } else if (tm) {
-      marker.position.copy(tm.top); ring.position.set(tm.c.x, 0.04, tm.c.z); ring.scale.setScalar(tm.r);
+      marker.visible = false; ring.position.set(tm.c.x, 0.04, tm.c.z); ring.scale.setScalar(tm.r);
       if (fly) flyTo(tm.c, Math.max(camera.zoom, 2.4));
     } else if (glowRole && fly) tween(framed(HOME, 0.84), 0.84);
   }
@@ -394,7 +394,7 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, reduceMotion 
     return to;
   }
   const flyTo = (target, zoom) => tween(framed(target, zoom), zoom);
-  canvas.addEventListener('pointerdown', () => { anim = null; });
+  canvas.addEventListener('pointerdown', () => { anim = null; follow = false; }); // the visitor takes the camera
 
   // Picking + hover
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
@@ -458,6 +458,10 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, reduceMotion 
       camera.zoom = THREE.MathUtils.lerp(anim.fromZ, anim.toZ, k); camera.updateProjectionMatrix();
       if (anim.t >= 1) anim = null;
     }
+    if (follow && !anim) { // live feed: glide after the group
+      const d = framed(groupCentre(), camera.zoom).sub(controls.target).setY(0).multiplyScalar(Math.min(1, dt * 1.6));
+      controls.target.add(d); camera.position.add(d);
+    }
     const before = controls.target.clone(); // keep the campus on screen
     controls.target.x = THREE.MathUtils.clamp(controls.target.x, -BOUND, BOUND);
     controls.target.z = THREE.MathUtils.clamp(controls.target.z, -BOUND, BOUND);
@@ -495,6 +499,14 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, reduceMotion 
 
   return {
     select, addLabel, storyEl,
+    // Feature a project in the live story and follow its group. restart=false keeps a story already playing.
+    watch(id, restart = false) {
+      const i = TEAMS.findIndex(t => t[0] === id);
+      if (i < 0) return;
+      if (restart || project() !== id) { loopN = i; startBeat(0); crew.forEach(a => stepActor(a, 1e3)); } // fresh start: crew takes its places, the new company walks in
+      follow = true;
+      tween(framed(groupCentre(), Math.max(camera.zoom, 1.6)), Math.max(camera.zoom, 1.6));
+    },
     zoom: f => tween(controls.target.clone(), THREE.MathUtils.clamp(camera.zoom * f, controls.minZoom, controls.maxZoom)),
     spin: deg => tween(controls.target.clone(), camera.zoom, offset().applyAxisAngle(new THREE.Vector3(0, 1, 0), THREE.MathUtils.degToRad(deg))),
     home: () => tween(framed(HOME, 0.84), 0.84, OFFSET.clone()),
