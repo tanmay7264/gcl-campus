@@ -1,5 +1,6 @@
-import { PROJECTS } from './projects.js';
-import { STAGES, ROLE, PEOPLE } from './data.js';
+// Bump ?v= on every deploy (here and in index.html) so browsers never mix old and new files.
+import { PROJECTS } from './projects.js?v=7';
+import { STAGES, ROLE, PEOPLE } from './data.js?v=7';
 
 // Google Apps Script Web App URL (see ../apps-script/Code.gs). Empty = form shows "not connected".
 const SCRIPT_URL = '';
@@ -195,7 +196,7 @@ addEventListener('hashchange', () => select(location.hash.slice(1) || null));
 const initial = location.hash.slice(1) || null;
 select(initial, { fly: false });
 
-import('./scene.js').then(({ createScene }) => {
+import('./scene.js?v=7').then(({ createScene }) => {
   map = createScene($('#scene'), $('#labels'), {
     onSelect: id => select(id), reduceMotion,
     onStory: ev => {
