@@ -275,13 +275,18 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, reduceMotion 
   const actor = (role, id, shirt) => { const r = person(role, id, shirt); return { r, path: null, s: 0, total: 0, door: null }; };
   const mentors = [actor('companies', 'companies'), actor('companies', 'companies')];
   for (const m of mentors) { m.card = new THREE.Mesh(cardGeo, cardMat.problem); m.card.castShadow = true; m.card.userData.id = 'companies'; pickables.push(m.card); scene.add(m.card); }
-  const crew = [actor('faculty', 'faculty'), actor('students', 'students', '#3FA796'), actor('students', 'students', '#F2C14E'), actor('students', 'students', '#5E8DD0')];
+  // Two teams take turns: while one leaves Demo Day, the next steps out of the buildings.
+  const team = shirts => [actor('faculty', 'faculty'), ...shirts.map(c => actor('students', 'students', c))];
+  const crews = [team(['#3FA796', '#F2C14E', '#5E8DD0']), team(['#E57A7A', '#5BB4D9', '#8DBA4E'])];
+  let crew = crews[0], nextCrew = null;
   const place = (a, cell, door) => { a.r.g.position.copy(at(...cell)); a.door = door; a.path = null; a.r.pose = 'idle'; };
   place(crew[0], BEATS[0].spots[1], BEATS[0].door);
   crew.slice(1).forEach((a, i) => place(a, BEATS[1].spots[i + 2], BEATS[1].door));
+  crews[1].forEach(a => { place(a, [8.5, 1.9], BEATS[1].door); a.r.g.visible = false; });
   mentors.forEach(m => { place(m, SPAWN, 'spawn'); m.r.g.visible = m.card.visible = false; });
 
   function walkTo(a, cell, door) {
+    if (cell && a.door === door && a.r.g.position.distanceTo(at(...cell)) < 0.05) { a.path = null; return; } // already there
     const from = a.r.g.position.clone(), pts = [from];
     if (a.door === 'spawn' && door !== 'spawn' && sOf(door) === 0) door = 'gate'; // arriving guest stops inside the arch
     const enter = a.door === 'spawn' ? [[SPAWN[0] + 1, SPAWN[1]], LOOPC[0]] : [a.door];
@@ -296,6 +301,13 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, reduceMotion 
     if (reduceMotion) a.s = a.total;
     a.r.pose = 'walk';
   }
+  function stroll(a, from, to, door) {
+    a.r.g.position.copy(at(...from)); a.r.g.visible = true;
+    const pts = [at(...from), at(...to)];
+    Object.assign(a, { path: pts, L: [0, pts[0].distanceTo(pts[1])], s: 0, total: pts[0].distanceTo(pts[1]), door, target: to });
+    if (reduceMotion) a.s = a.total;
+    a.r.pose = 'walk';
+  }
   const tmpV = new THREE.Vector3();
   function stepActor(a, dt) {
     if (!a.path) return true;
@@ -306,27 +318,51 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, reduceMotion 
     const d = a.path[i + 1].clone().sub(a.path[i]);
     a.r.g.position.copy(tmpV);
     if (d.lengthSq() > 1e-6) a.r.g.rotation.y = Math.atan2(-d.z, d.x);
-    if (a.s >= a.total) { a.path = null; return true; }
+    if (a.s >= a.total) { a.path = null; a.r.pose = 'idle'; return true; } // wait calmly for the others
     return false;
   }
 
   let beat = 0, loopN = 0, phase = 'walk', dwell = 0, mentor = mentors[0], follow = false;
+  const leaving = []; // people walking off stage; hidden when they get there
+  const HANDOVER = 7;  // seconds between one project's Demo Day and the next company's arrival
+  let handoverAge = 0;
   const project = () => TEAMS[loopN % TEAMS.length][0];
   function startBeat(i) {
     beat = i; phase = 'walk';
     const b = BEATS[i];
     if (i === 0) { // a new company arrives; the previous one heads home with its solution
       const prev = mentor; mentor = mentors[mentors[0] === prev ? 1 : 0];
-      if (prev !== mentor && prev.r.g.visible) walkTo(prev, null, 'spawn');
+      if (prev !== mentor && prev.r.g.visible && !leaving.includes(prev)) { walkTo(prev, null, 'spawn'); leaving.push(prev); }
+      if (leaving.includes(mentor)) leaving.splice(leaving.indexOf(mentor), 1);
       place(mentor, SPAWN, 'spawn'); mentor.r.g.visible = mentor.card.visible = true; mentor.card.material = cardMat.problem;
     }
     const cast = [mentor, ...crew];
     cast.forEach((a, k) => { if (b.spots[k]) walkTo(a, b.spots[k], b.doors?.[k] || b.door); });
     onStory?.({ stage: STAGE_IDS[i], project: project(), phase: 'walk' });
   }
+  const nextProject = () => TEAMS[(loopN + 1) % TEAMS.length][0];
+  function startHandover() {
+    phase = 'handover'; handoverAge = 0;
+    crew.forEach((a, k) => { walkTo(a, [5.9 + k * 0.5, 21.75], [6.8, 20.3]); leaving.push(a); }); // back to class at the Main Block
+    walkTo(mentor, null, 'spawn'); leaving.push(mentor);                                         // the company heads home with its solution
+    nextCrew = crews[crews[0] === crew ? 1 : 0];
+    nextCrew.forEach((a, k) => { const i = leaving.indexOf(a); if (i >= 0) leaving.splice(i, 1); });
+    stroll(nextCrew[0], [1.0, 1.8], BEATS[0].spots[1], BEATS[0].door);                         // faculty steps out at the Industry Gate
+    nextCrew.slice(1).forEach((a, k) => stroll(a, [8.3 + k * 0.3, 1.9], BEATS[0].spots[k + 2], BEATS[0].doors[k + 2])); // students out of the studio
+    onStory?.({ stage: 'solution', project: project(), phase: 'done', next: nextProject(), duration: HANDOVER });
+  }
   function updateStory(dt) {
+    for (let i = leaving.length - 1; i >= 0; i--) {
+      const a = leaving[i];
+      if (stepActor(a, dt)) { a.r.g.visible = false; if (a.card) a.card.visible = false; leaving.splice(i, 1); }
+    }
+    if (phase === 'handover') {
+      handoverAge += dt;
+      const ready = nextCrew.map(a => stepActor(a, dt)).every(Boolean);
+      if (handoverAge >= HANDOVER && ready) { crew = nextCrew; nextCrew = null; loopN++; startBeat(0); }
+      return;
+    }
     let arrived = true;
-    for (const m of mentors) if (m !== mentor && m.path) { if (stepActor(m, dt)) m.r.g.visible = m.card.visible = false; }
     [mentor, ...crew].forEach(a => { if (!stepActor(a, dt)) arrived = false; });
     if (phase === 'walk' && arrived) {
       phase = 'dwell'; dwell = beat === 5 ? 9 : 8;
@@ -338,7 +374,7 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, reduceMotion 
     } else if (phase === 'dwell') {
       dwell -= dt;
       if (beat === 5 && dwell < 4) mentor.card.material = cardMat.solution; // the problem card becomes a solution
-      if (dwell <= 0) { if (beat === 5) { loopN++; startBeat(0); } else startBeat(beat + 1); }
+      if (dwell <= 0) { if (beat === 5) startHandover(); else startBeat(beat + 1); }
     }
   }
   // Orange spotlight that follows the featured company's group
@@ -348,10 +384,12 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, reduceMotion 
   spotFill.rotation.x = -Math.PI / 2; scene.add(spotFill);
   const storyAnchor = new THREE.Vector3();
   function groupCentre() {
+    if (phase === 'handover') return storyAnchor.copy(handoverAge < 2.5 ? at(18.2, 23.2) : at(4.8, 3.1)).setY(1.75);
     const b = BEATS[beat]; storyAnchor.set(0, 0, 0); let n = 0;
     [mentor, ...crew].forEach((a, k) => { if (b.spots[k] && (!b.focus || b.focus.includes(k))) { storyAnchor.add(a.r.g.position); n++; } });
     return storyAnchor.divideScalar(n).setY(1.75);
   }
+
 
   /* ---------- Selection ---------- */
   const marker = new THREE.Group(); marker.visible = false; scene.add(marker);
@@ -503,7 +541,7 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, reduceMotion 
     watch(id, restart = false) {
       const i = TEAMS.findIndex(t => t[0] === id);
       if (i < 0) return;
-      if (restart || project() !== id) { loopN = i; startBeat(0); crew.forEach(a => stepActor(a, 1e3)); } // fresh start: crew takes its places, the new company walks in
+      if (restart || project() !== id) { if (nextCrew) { crew = nextCrew; nextCrew = null; } loopN = i; startBeat(0); crew.forEach(a => stepActor(a, 1e3)); } // fresh start: crew takes its places, the new company walks in
       follow = true;
       tween(framed(groupCentre(), Math.max(camera.zoom, 1.6)), Math.max(camera.zoom, 1.6));
     },

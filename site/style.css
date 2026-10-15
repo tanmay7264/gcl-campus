@@ -180,6 +180,17 @@ kbd { font: 600 11px Inter; border: 1px solid var(--line); border-radius: 5px; p
 #rows button:hover .chip.watchable { background: var(--purple); color: #fff; }
 #rows button:hover .chip.watchable .dom { display: none; }
 #rows button:hover .chip.watchable .watch { display: inline; }
+.featured.done { background: var(--green-l); color: var(--green-d); box-shadow: 0 0 0 1.5px var(--green) inset; }
+.featured.done .tile .ms { font-size: 13px; }
+.now.done { background: #F2F9EA; border-color: #BFDDA0; }
+.now.done .now-head { color: var(--green-d); } .now.done .now-head b { color: #2F4A14; } .now.done .now-head .ms { color: var(--green); font-size: 18px; }
+.now.done .now-head .step { color: var(--green-d); }
+.now.done .timebar { background: #DCEFC8; } .now.done .timebar i { background: var(--green); width: 100%; transform-origin: left; animation: fillbar linear forwards; }
+.next { display: flex; align-items: center; gap: 8px; font-size: 12px; background: #fff; border-radius: 10px; padding: 6px 8px; }
+.next small { font-weight: 700; color: #9A5413; text-transform: uppercase; font-size: 10px; letter-spacing: .4px; }
+.next .tile { width: 22px; height: 22px; border-radius: 999px; font-size: 10px; }
+.next span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.live-dot.ok { background: var(--green); }
 #rows button.featured { background: var(--orange-l); box-shadow: 0 0 0 1.5px #F6C795 inset; }
 .maplabel.featured { background: #FFF3E6; color: #9A5413; box-shadow: 0 0 0 2px #F0973A, 0 4px 12px rgba(52,46,90,.14); }
 .maplabel.featured .ms { color: #E8892B; }
@@ -250,6 +261,7 @@ label.check input { width: 17px; height: 17px; margin: 0; accent-color: var(--pu
   .now { width: 100%; padding: 8px 10px; gap: 4px; }
   .now-head { font-size: 12px; } .now-foot { display: none; }
   .now p { font-size: 12px; line-height: 1.35; }
+  .now.done p { display: none; }
   .ccard { padding: 8px; } .ccard .tile.lg { width: 32px; height: 32px; }
 
   /* Map labels: keep stages + the featured/selected team only */

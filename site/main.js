@@ -1,6 +1,6 @@
 // Bump ?v= on every deploy (here and in index.html) so browsers never mix old and new files.
-import { PROJECTS } from './projects.js?v=9';
-import { STAGES, ROLE, PEOPLE } from './data.js?v=9';
+import { PROJECTS } from './projects.js?v=11';
+import { STAGES, ROLE, PEOPLE } from './data.js?v=11';
 
 // Google Apps Script Web App URL (see ../apps-script/Code.gs). Empty = form shows "not connected".
 const SCRIPT_URL = '';
@@ -74,7 +74,7 @@ function renderInspector() {
   if (p) {
     insp.innerHTML = `
       ${head(p.org[0], PCOLOR[p.id], 'PARTNER PROJECT · ' + p.domain.toUpperCase(), p.title, p.org)}
-      <div class="status">${story?.project === p.id ? `<span class="chip orange">● Live feed playing</span><span class="muted">${S[story.stage].short} · watch the team on the map</span>` : '<span class="chip green">Live project · completed</span><span class="muted">Student team at work</span>'}</div>
+      <div class="status">${story?.project === p.id && story.phase === 'done' ? `<span class="chip green">✓ Project complete</span><span class="muted">Up next: ${P[story.next].org}</span>` : story?.project === p.id ? `<span class="chip orange">● Live feed playing</span><span class="muted">${S[story.stage].short} · watch the team on the map</span>` : '<span class="chip green">Live project · completed</span><span class="muted">Student team at work</span>'}</div>
       <button class="thumb" data-poster="${p.id}"><img src="${p.image}" alt="${p.org} project poster"><span>${ms('open_in_full')} View poster</span></button>
       ${rows([['Challenge', p.challenge], ['Stakeholders', p.stakeholders], ['Insight', p.insight], ['Prototype', p.prototype], ['Solution', p.outcome]])}
       <p class="team">${ms('groups')}<span>${p.team}${p.mentor ? '<br>' + p.mentor : ''}</span></p>
@@ -104,16 +104,29 @@ function renderInspector() {
 const WHO = { companies: ['Company', '#E8892B'], faculty: ['Faculty', '#66518A'], students: ['Students', '#3FA796'] };
 function renderTracker() {
   const live = story && (!current || current === story.project); // narrate the live project when nothing else is selected
-  const si = live ? S[story.stage].i : S[current]?.i ?? (P[current?.replace('rep:', '')] ? STAGES.length : -1); // a project = journey complete
+  const done = live && story.phase === 'done';
+  const si = done ? STAGES.length : live ? S[story.stage].i : S[current]?.i ?? (P[current?.replace('rep:', '')] ? STAGES.length : -1); // a project = journey complete
   const walking = live && story.phase === 'walk';
   $('#steps').innerHTML = STAGES.map((s, i) => {
     const st = i < si ? 'done' : i === si ? 'active' : 'todo';
     const cls = st + (walking && i === si ? ' walking' : '') + (walking && i === si - 1 ? ' leaving' : '');
     const dot = st === 'done' ? ms('check') : walking && i === si ? ms('directions_walk') : s.num;
-    const sub = st === 'active' ? (live ? (walking ? 'On the way' : 'Happening now') : 'You are here') : s.term.split(' · ')[0].replace('Trimester', 'Trim');
+    const sub = st === 'active' ? (live ? (walking ? 'On the way' : 'Happening now') : 'You are here') : done ? 'Done' : s.term.split(' · ')[0].replace('Trimester', 'Trim');
     return `<li class="${cls}"><button data-select="${s.id}" aria-current="${st === 'active' ? 'step' : 'false'}"><span class="dot">${dot}</span><b>${s.short}</b><small>${sub}</small></button></li>`;
   }).join('');
   const p = live ? P[story.project] : P[current?.replace('rep:', '')] || P[S[current]?.eg] || P.idfc;
+  if (done) {
+    const n = P[story.next];
+    $('#trackSub').innerHTML = `<span class="featured done"><span class="tile" style="background:${PCOLOR[p.id]}">${ms('check')}</span>${p.org}</span><span class="muted">Project complete</span>`;
+    $('#current').innerHTML = `
+      <div class="now done">
+        <div class="now-head">${ms('celebration')}<b>Project complete · ${p.org}</b><span class="step">6 of 6 ✓</span></div>
+        <p>${p.org} now has a business-ready solution. The team heads back to class while the next company arrives.</p>
+        <div class="next"><small>Up next</small><span class="tile" style="background:${PCOLOR[n.id]}">${n.org[0]}</span><span><b>${n.org}</b> · ${n.title}</span></div>
+        <div class="timebar"><i style="animation-duration:${story.duration}s"></i></div>
+      </div>`;
+    return;
+  }
   if (live) {
     const s = S[story.stage];
     $('#trackSub').innerHTML = `<span class="featured"><span class="tile" style="background:${PCOLOR[p.id]}">${p.org[0]}</span>${p.org}</span><span class="muted">${p.title} · now featured</span>`;
@@ -136,7 +149,7 @@ function renderTracker() {
 
 /* ---------- List tabs + search ---------- */
 const rowStage = s => `<li><button data-select="${s.id}" class="${current === s.id ? 'on' : ''}"><span class="tile" style="background:${s.id === 'challenge' ? '#F0973A' : '#7AA342'}">${s.num}</span><span><b>${s.title}</b><small>${s.building} · ${s.term}</small></span><span class="chip">${s.role ? '★ You' : 'Students'}</span></button></li>`;
-const rowProject = p => { const f = story?.project === p.id; return `<li><button data-select="${p.id}" class="${current === p.id ? 'on' : ''} ${f ? 'featured' : ''}"><span class="tile" style="background:${PCOLOR[p.id]}">${p.org[0]}</span><span><b>${p.org}</b><small>${f ? 'Live now · ' + S[story.stage].short : p.title}</small></span><span class="chip ${f ? 'orange' : 'watchable'}">${f ? '● Live' : `<span class="dom">${p.domain.split(' · ')[0]}</span><span class="watch">▶ Watch live</span>`}</span></button></li>`; };
+const rowProject = p => { const f = story?.project === p.id && story.phase !== 'done', nx = story?.phase === 'done' && story.next === p.id; return `<li><button data-select="${p.id}" class="${current === p.id ? 'on' : ''} ${f ? 'featured' : ''}"><span class="tile" style="background:${PCOLOR[p.id]}">${p.org[0]}</span><span><b>${p.org}</b><small>${f ? 'Live now · ' + S[story.stage].short : nx ? 'Starting next' : p.title}</small></span><span class="chip ${f ? 'orange' : nx ? 'green' : 'watchable'}">${f ? '● Live' : nx ? 'Up next' : `<span class="dom">${p.domain.split(' · ')[0]}</span><span class="watch">▶ Watch live</span>`}</span></button></li>`; };
 const rowRole = s => `<li><button data-select="${s.id}" class="${current === s.id ? 'on' : ''}"><span class="tile" style="background:#F0973A">${ms('star')}</span><span><b>${s.role}</b><small>${s.title} · ${s.term}</small></span></button></li>`;
 function renderRows() {
   const q = $('#search').value.trim().toLowerCase();
@@ -203,14 +216,17 @@ addEventListener('hashchange', () => select(location.hash.slice(1) || null));
 const initial = location.hash.slice(1) || null;
 select(initial, { fly: false });
 
-import('./scene.js?v=9').then(({ createScene }) => {
+import('./scene.js?v=11').then(({ createScene }) => {
   map = createScene($('#scene'), $('#labels'), {
     onSelect: id => select(id), reduceMotion,
     onStory: ev => {
-      const changed = ev.project !== story?.project;
+      const prev = story?.project, changed = ev.project !== prev;
       story = ev;
       const s = S[ev.stage], p = P[ev.project];
-      map.storyEl.innerHTML = `<span class="live-dot"></span><span><b>${p.org}</b><small>${ev.phase === 'walk' ? 'Walking to ' + s.building : s.short + ' · ' + s.building}</small></span>`;
+      map.storyEl.innerHTML = ev.phase === 'done'
+        ? `<span class="live-dot ok"></span><span><b>${p.org} ✓ Solution delivered</b><small>Up next: ${P[ev.next].org}</small></span>`
+        : `<span class="live-dot"></span><span><b>${p.org}</b><small>${ev.phase === 'walk' ? 'Walking to ' + s.building : s.short + ' · ' + s.building}</small></span>`;
+      if (changed && prev && current === prev) select(ev.project, { fly: false }); // a watched feed rolls on to the next company
       document.querySelectorAll('.maplabel[data-id]').forEach(l => l.classList.toggle('featured', l.dataset.id === ev.project));
       if (!current || P[current]) renderTracker();
       if (changed || tab === 'projects') renderRows();
