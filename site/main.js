@@ -1,6 +1,6 @@
 // Bump ?v= on every deploy (here and in index.html) so browsers never mix old and new files.
-import { PROJECTS } from './projects.js?v=7';
-import { STAGES, ROLE, PEOPLE } from './data.js?v=7';
+import { PROJECTS } from './projects.js?v=9';
+import { STAGES, ROLE, PEOPLE } from './data.js?v=9';
 
 // Google Apps Script Web App URL (see ../apps-script/Code.gs). Empty = form shows "not connected".
 const SCRIPT_URL = '';
@@ -11,16 +11,19 @@ const P = Object.fromEntries(PROJECTS.map(p => [p.id, p]));
 const S = Object.fromEntries(STAGES.map((s, i) => [s.id, { ...s, i }]));
 const PCOLOR = { deloitte: '#4F86C6', idfc: '#7B63A6', govardhan: '#B98A55', aurapay: '#7B63A6', kaleidosync: '#B98A55' };
 const ms = name => `<span class="ms">${name}</span>`;
+const phone = () => matchMedia('(max-width: 900px)').matches;
 
 let map = null;          // 3D scene API (null without WebGL)
 let current = null;      // selected id: stage, project (= its student team), people group, or "rep:<project>" (company mentor)
 let tab = 'projects';
+const insp = document.getElementById('inspector');
 let story = null;        // { stage, project } of the live project walking the campus
 
 /* ---------- Selection ---------- */
 function select(id, { fly = true } = {}) {
   if (id && !S[id] && !P[id] && !PEOPLE[id] && !(id.startsWith('rep:') && P[id.slice(4)])) id = null;
   current = id;
+  if (phone()) insp.classList.toggle('peek', !id || !!P[id]); // phones: keep the map visible for the welcome and live feeds; tap to expand
   map?.select(id, { fly });
   if (P[id]) map?.watch(id); // picking a project starts (or keeps) its live feed
   renderInspector(); renderTracker(); renderRows();
@@ -28,11 +31,11 @@ function select(id, { fly = true } = {}) {
 }
 
 /* ---------- Inspector ---------- */
-const insp = $('#inspector');
 const head = (tile, color, kicker, title, sub) => `
   <div class="ihead">
     <span class="tile lg" style="background:${color}">${tile}</span>
     <div><small class="kicker">${kicker}</small><h2>${title}</h2><small>${sub}</small></div>
+    <button class="icon sheet-toggle" data-action="sheet" aria-label="Show or hide details">${ms('expand_more')}</button>
     <button class="icon" data-action="close" aria-label="Close panel">${ms('close')}</button>
   </div>`;
 const rows = list => `<dl class="rows">${list.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>`;
@@ -143,7 +146,9 @@ function renderRows() {
     const hit = o => JSON.stringify(o).toLowerCase().includes(q);
     html = STAGES.filter(hit).map(rowStage).join('') + PROJECTS.filter(hit).map(rowProject).join('') || `<li class="empty">No matches for “${q}”</li>`;
   } else html = (tab === 'stages' ? STAGES.map(rowStage) : tab === 'role' ? ROLE.map(rowRole) : PROJECTS.map(rowProject)).join('');
+  const keep = $('#rows').scrollLeft; // re-renders must not reset the phone strip's scroll
   $('#rows').innerHTML = html;
+  $('#rows').scrollLeft = keep;
 }
 document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => { tab = b.dataset.tab; $('#search').value = ''; renderRows(); }));
 $('#search').addEventListener('input', renderRows);
@@ -153,6 +158,7 @@ $('#search').addEventListener('keydown', e => { if (e.key === 'Enter') $('#rows 
 const formDrawer = $('#formDrawer'), posterModal = $('#posterModal');
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-select],[data-action],[data-poster],[data-close]');
+  if (!t && phone() && e.target.closest('.ihead')) return insp.classList.toggle('peek'); // tap the sheet header to expand/collapse
   if (!t) return;
   if (t.dataset.select) return select(t.dataset.select);
   if (t.dataset.poster) { const p = P[t.dataset.poster]; $('img', posterModal).src = p.image; $('img', posterModal).alt = p.org + ' project poster'; return posterModal.showModal(); }
@@ -162,6 +168,7 @@ document.addEventListener('click', e => {
     close: () => select(null),
     zoomin: () => map?.zoom(1.35), zoomout: () => map?.zoom(1 / 1.35),
     spin: () => map?.spin(90), home: () => { map?.home(); },
+    sheet: () => insp.classList.toggle('peek'),
     replay: () => { map?.watch(current, true); renderInspector(); },
   })[t.dataset.action]?.();
 });
@@ -196,7 +203,7 @@ addEventListener('hashchange', () => select(location.hash.slice(1) || null));
 const initial = location.hash.slice(1) || null;
 select(initial, { fly: false });
 
-import('./scene.js?v=7').then(({ createScene }) => {
+import('./scene.js?v=9').then(({ createScene }) => {
   map = createScene($('#scene'), $('#labels'), {
     onSelect: id => select(id), reduceMotion,
     onStory: ev => {
@@ -207,6 +214,7 @@ import('./scene.js?v=7').then(({ createScene }) => {
       document.querySelectorAll('.maplabel[data-id]').forEach(l => l.classList.toggle('featured', l.dataset.id === ev.project));
       if (!current || P[current]) renderTracker();
       if (changed || tab === 'projects') renderRows();
+      if (changed && phone()) { const r = $('#rows'), f = r.querySelector('.featured'); if (f) r.scrollLeft = f.getBoundingClientRect().left - r.getBoundingClientRect().left + r.scrollLeft - 10; } // bring the live chip into view
       if (P[current] && (changed || current === ev.project)) { const sc = insp.scrollTop; renderInspector(); insp.scrollTop = sc; insp.classList.remove('enter'); }
     },
   });

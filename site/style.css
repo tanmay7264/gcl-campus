@@ -225,22 +225,63 @@ label.check input { width: 17px; height: 17px; margin: 0; accent-color: var(--pu
 /* Responsive */
 @media (max-width: 1280px) { .kpis .kpi:nth-child(3), .program { display: none; } }
 @media (max-width: 1100px) { .live { display: none; } .tracker { flex-wrap: wrap; } .now { width: 100%; } }
+/* Phones & small tablets: narrator on top, map in the middle, peek sheet + project strip at the bottom */
+.sheet-toggle { display: none; }
 @media (max-width: 900px) {
-  .topbar { padding: 0 14px; gap: 10px; height: 58px; }
-  .brand span, .search kbd { display: none; }
-  .search { width: auto; flex: 1; } .grow { display: none; }
-  .topbar .btn { font-size: 12px; padding: 9px 12px; }
+  .topbar { padding: 0 12px; gap: 10px; height: 54px; }
+  .brand span, .search, .grow ~ .program { display: none; }
+  .grow { display: block; }
+  .topbar .btn { font-size: 12.5px; padding: 9px 14px; }
   .topbar .long { display: none; } .topbar .short { display: inline; }
   .brand img { height: 28px; }
-  .kpis, .list { display: none; }
-  .legend { top: auto; bottom: calc(46vh + 12px); left: 12px; padding: 4px 6px; } .legend small { display: none; } .legend button { padding: 5px 7px; font-size: 11px; }
-  .controls { top: auto; bottom: calc(46vh + 12px); right: 12px; }
-  .inspector { top: auto; bottom: 0; left: 0; right: 0; width: auto; max-height: 46vh; border-radius: 20px 20px 0 0; padding: 16px 18px 20px; }
-  .inspector::before { content: ""; width: 40px; height: 4px; border-radius: 4px; background: var(--line); align-self: center; margin: -6px 0 2px; }
-  .tracker { top: 70px; bottom: auto; left: 12px; right: 12px; max-width: none; padding: 10px 12px; overflow-x: auto; }
-  .steps-wrap h2 { display: none; }
-  .tracker .current { width: 100%; } .now { padding: 8px 10px; gap: 4px; } .now-foot, .now-head .step { display: none; } .now p { font-size: 12px; } .ccard { display: none; }
-  .steps li { width: 74px; } .steps small { display: none; }
+  .kpis, .legend, .controls, .list .tabs, .list .hint { display: none; }
+
+  /* Narrator */
+  .tracker { top: 62px; bottom: auto; left: 10px; right: 10px; max-width: none; padding: 10px 10px 8px; flex-direction: column; align-items: stretch; gap: 8px; }
+  .steps-wrap h2 { font-size: 12px; margin-bottom: 8px; }
+  .steps-wrap h2 .t, #trackSub .muted { display: none; }
+  .steps li { width: auto; flex: 1; min-width: 0; }
+  .steps li:not(:last-child)::after { top: 12px; left: calc(50% + 15px); width: calc(100% - 30px); }
+  .steps .dot { width: 24px; height: 24px; font-size: 10.5px; }
+  .steps .dot .ms, .steps li.active .dot .ms { font-size: 14px; }
+  .steps b { font-size: 9.5px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .steps small { display: none; }
+  .tracker .current { width: 100%; min-width: 0; }
+  .now { width: 100%; padding: 8px 10px; gap: 4px; }
+  .now-head { font-size: 12px; } .now-foot { display: none; }
+  .now p { font-size: 12px; line-height: 1.35; }
+  .ccard { padding: 8px; } .ccard .tile.lg { width: 32px; height: 32px; }
+
+  /* Map labels: keep stages + the featured/selected team only */
+  .maplabel { font-size: 10.5px; padding: 3px 8px 3px 3px; }
+  .maplabel i { min-width: 16px; height: 16px; font-size: 9px; }
+  .maplabel.project:not(.featured):not(.on) { display: none; }
+  .maplabel.story { padding: 5px 10px 5px 7px; }
+
+  /* Project strip */
+  .list { left: 0; right: 0; bottom: 0; width: auto; height: auto; border-radius: 0; border-width: 1px 0 0; padding: 8px 10px calc(8px + env(safe-area-inset-bottom)); gap: 4px; z-index: 3; }
+  .list::before { content: "▶ Watch a project live"; font-size: 10.5px; font-weight: 700; color: var(--muted); padding-left: 2px; }
+  #rows { display: flex; gap: 8px; overflow-x: auto; margin: 0; padding-bottom: 2px; scrollbar-width: none; scroll-snap-type: x proximity; }
+  #rows li { flex: none; scroll-snap-align: start; }
+  #rows button { width: auto; border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px 4px 4px; gap: 7px; }
+  #rows button > span:nth-child(2) small, #rows .chip { display: none; }
+  #rows .tile { width: 26px; height: 26px; border-radius: 999px; }
+
+  /* Bottom sheet above the strip: peeks by default, expands on tap */
+  .inspector { top: auto; bottom: 74px; left: 0; right: 0; width: auto; max-height: calc(54dvh - 74px); border-radius: 20px 20px 0 0; padding: 14px 16px 18px; z-index: 2; }
+  .inspector::before { content: ""; width: 40px; height: 4px; border-radius: 4px; background: var(--line); align-self: center; margin: -6px 0 0; }
+  .inspector .actions { bottom: -18px; margin: 0 -16px -18px; padding: 10px 16px 14px; }
+  .sheet-toggle { display: grid; transition: transform .2s; }
+  .inspector.peek { overflow: hidden; gap: 8px; padding-bottom: 12px; }
+  .inspector.peek > :not(.ihead):not(.status) { display: none; }
+  .inspector.peek .sheet-toggle { transform: rotate(180deg); }
+  .inspector.peek .ihead h2 { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .inspector.peek .ihead > div { min-width: 0; }
+  .inspector.peek .ihead > div > small:not(.kicker), .inspector.peek .status .muted { display: none; }
+  .inspector.peek .kicker { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .inspector.peek .tile.lg { width: 34px; height: 34px; }
+  .ihead { cursor: pointer; }
+  .thumb img { height: 110px; }
   form .grid { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
