@@ -1,0 +1,23 @@
+{
+  "world-src/components/WorldScene.ts": {
+    "file": "assets/WorldScene-DIChHUd_.js",
+    "name": "WorldScene",
+    "src": "world-src/components/WorldScene.ts",
+    "isDynamicEntry": true,
+    "imports": [
+      "world-src/main.tsx"
+    ]
+  },
+  "world-src/main.tsx": {
+    "file": "assets/main-BpBukUx_.js",
+    "name": "main",
+    "src": "world-src/main.tsx",
+    "isEntry": true,
+    "dynamicImports": [
+      "world-src/components/WorldScene.ts"
+    ],
+    "css": [
+      "assets/main-CMtjdYgy.css"
+    ]
+  }
+}

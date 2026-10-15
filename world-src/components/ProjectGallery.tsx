@@ -1,0 +1,7 @@
+'use client';
+import { useState } from 'react';
+import Link from '@/Link';
+import { ArrowUpRight } from 'lucide-react';
+import { projects } from '@/lib/projects';
+const filters=['All projects','Finance','Sustainability','Social impact','Responsible AI'];
+export function ProjectGallery(){const [filter,setFilter]=useState('All projects');const visible=projects.filter(p=>filter==='All projects'||p.category===filter);return <><div className="project-filters" role="group" aria-label="Filter projects">{filters.map(f=><button key={f} type="button" className={filter===f?'active':''} onClick={()=>setFilter(f)} aria-pressed={filter===f}>{f}</button>)}</div><div className="project-grid">{visible.map((p,i)=><Link href={'/weschool-gcl/world/projects/'+p.slug} key={p.slug} className="project-card"><div className="project-image" style={{background:p.color+'18'}}><span className="project-category">{p.category}</span><img src={p.cover} alt={p.title+' student prototype'} loading="lazy" width="700" height="430"/><span className="project-open" aria-hidden="true"><ArrowUpRight size={22}/></span></div><div className="project-card-copy"><span className="micro">STUDENT PROJECT / 0{projects.indexOf(p)+1}</span><h3>{p.title}</h3><p>{p.summary}</p><span className="text-link">Explore the project <ArrowUpRight size={15}/></span></div></Link>)}</div><p className="project-note">Original project images from the supplied student references. All solutions are presented as prototypes.</p></>}
