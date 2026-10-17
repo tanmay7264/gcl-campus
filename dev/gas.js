@@ -13,20 +13,22 @@ function makeSheet(name, sheets) {
     const api = {
       setValues(v) { for (let i = 0; i < nr; i++) { const row = sh.rows[r - 1 + i] || (sh.rows[r - 1 + i] = []); for (let j = 0; j < nc; j++) row[c - 1 + j] = v[i][j]; } return api; },
       getValues() { return Array.from({ length: nr }, (_, i) => Array.from({ length: nc }, (_, j) => (sh.rows[r - 1 + i] || [])[c - 1 + j] ?? '')); },
-      setFontWeight() { return api; }
+      setFontWeight() { return api; },
+      clearContent() { for (let i = 0; i < nr; i++) for (let j = 0; j < nc; j++) if (sh.rows[r - 1 + i]) sh.rows[r - 1 + i][c - 1 + j] = ''; return api; }
     };
     return api;
   };
   Object.assign(sh, {
     getName: () => sh.name,
     setName: (n) => { delete sheets[sh.name]; sh.name = n; sheets[n] = sh; return sh; },
-    getLastRow: () => sh.rows.length,
+    getLastRow: () => { let n = sh.rows.length; while (n > 1 && sh.rows[n - 1].every((v) => v === '' || v == null)) n--; return n; },
     getLastColumn: () => Math.max(0, ...sh.rows.map((r) => r.length)),
     getRange: range,
     setFrozenRows: () => {},
-    appendRow: (r) => sh.rows.push(r.slice()),
+    appendRow: (r) => { sh.rows[sh.getLastRow()] = r.slice(); }, // like Sheets: right after the last row with content
     deleteRow: (i) => sh.rows.splice(i - 1, 1),
-    getDataRange: () => ({ getValues: () => { const w = sh.getLastColumn(); return sh.rows.map((r) => Array.from({ length: w }, (_, j) => r[j] ?? '')); } })
+    // Like Sheets, the data range ends at the last row that still has content.
+    getDataRange: () => ({ getValues: () => { const w = sh.getLastColumn(); let n = sh.rows.length; while (n > 1 && sh.rows[n - 1].every((v) => v === '' || v == null)) n--; return sh.rows.slice(0, n).map((r) => Array.from({ length: w }, (_, j) => r[j] ?? '')); } })
   });
   return sh;
 }

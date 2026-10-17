@@ -140,9 +140,12 @@ function seedDemoPeople_(rows, r, now, day) {
 function removeDemoData_() {
   return withLock_(function () {
     var n = 0;
-    var del = function (name, test) {
-      var sh = table_(name);
-      readAll_(name).filter(test).reverse().forEach(function (o) { sh.deleteRow(o._row); n++; });
+    var del = function (name, test) { // rewrite the table in one go: deleting rows one by one takes minutes
+      var sh = table_(name), all = readAll_(name), keep = all.filter(function (o) { return !test(o); });
+      if (keep.length === all.length) return;
+      n += all.length - keep.length;
+      sh.getRange(2, 1, all.length, TABLES[name].length).clearContent();
+      if (keep.length) sh.getRange(2, 1, keep.length, TABLES[name].length).setValues(keep.map(function (o) { return toRow_(name, o); }));
     };
     var ids = readAll_('Challenges').filter(isDemoChallenge_).map(function (c) { return c.id; });
     del('Challenges', isDemoChallenge_);
