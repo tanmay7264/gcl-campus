@@ -19,7 +19,7 @@ const BUILDINGS = [
 const DOORS = { challenge: ['z+', 0.4], stakeholders: ['z+', 0], journey: ['z+', 0], insights: ['x-', 0], prototype: ['x-', 0], solution: ['z-', 0], about: ['z-', 0] };
 const FLOORS = { challenge: '#E8DCC8', stakeholders: '#E8DCC8', journey: '#E3E8F2', insights: '#E8DCC8', prototype: '#E3E8F2', solution: '#DCD3EA' };
 // Student teams (one per partner project) around tables on the quad lawns.
-const TEAMS = [['idfc', 7.6, 7.6], ['deloitte', 16.4, 7.6], ['govardhan', 7.6, 16.4], ['aurapay', 16.4, 16.4], ['kaleidosync', 0.4, 14.8]];
+const TEAMS = [['idfc', 7.6, 7.6], ['deloitte', 16.4, 7.6], ['govardhan', 7.6, 16.4], ['aurapay', 17.7, 17.7], ['kaleidosync', 0.4, 14.8]];
 const PATHS = [[3, 3, 18, 1.4], [3, 19.6, 18, 1.4], [3, 3, 1.4, 18], [19.6, 3, 1.4, 18], [11.3, 4.4, 1.4, 15.2], [4.4, 11.3, 15.2, 1.4], [-5, 3, 8, 1.4]];
 const LAWNS = [[4.4, 4.4, 6.9, 6.9], [12.7, 4.4, 6.9, 6.9], [4.4, 12.7, 6.9, 6.9], [12.7, 12.7, 6.9, 6.9], [-2.5, 13, 4.5, 8]];
 const TREES = [[-3, 6], [-3, 9], [5.6, 1.4], [11.2, 1.6], [17, 0.8], [20.5, 1], [24.6, 3], [25.6, 10], [25.2, 17], [21.5, 24.5], [17.8, 24.8], [10.4, 24.6], [2.4, 24.4], [-2.8, 22.5], [5.2, 5.2], [10.4, 5.4], [13.6, 5.2], [18.6, 5.4], [5.4, 18.6], [10.4, 18.8], [13.6, 18.6], [18.8, 18.6], [-3.5, 12], [26, 21], [9.2, 10.4], [14.8, 13.6]];
@@ -63,6 +63,7 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, reduceMotion 
   sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.02;
   scene.add(sun);
 
+  const pickables = []; // everything clickable in 3D (filled by the environment, buildings and people)
   /* ---------- Environment: ground, nature, surroundings (seeded so it looks the same every visit) ---------- */
   let es = 11; const er = () => (es = (es * 16807) % 2147483647) / 2147483647;
   const B3 = (w, h, d) => new THREE.BoxGeometry(w, h, d);
@@ -111,6 +112,32 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, reduceMotion 
   const FLOWERS = ['#F28AB2', '#F6D04D', '#FFFFFF', '#E8604C', '#B79AE0'], flowers = [];
   for (let i = 0; i < 220; i++) { const a = er() * Math.PI * 2, r = 2.35 + er() * 0.35; if (Math.min(...[0, 1, 2, 3].map(k => Math.abs(((a - k * Math.PI / 2) + Math.PI * 3) % (Math.PI * 2) - Math.PI))) < 0.32) continue; flowers.push([12 + Math.cos(a) * r, 12 + Math.sin(a) * r]); }
   for (const [x, z, w, d] of FORECOURTS.slice(1)) for (let i = 0; i < 14; i++) { const side = i % 2 ? 1 : -1; flowers.push(w > d ? [x + er() * w, z + d / 2 + side * (d / 2 + 0.25)] : [x + w / 2 + side * (w / 2 + 0.25), z + er() * d]); }
+  // WeSchool brand monument beside the fountain, facing visitors (logo drawn once the image loads)
+  function brandTexture(w, h, subtitle) {
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const g = c.getContext('2d'), t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+    const draw = img => {
+      g.fillStyle = '#FFFFFF'; g.fillRect(0, 0, w, h);
+      const lh = subtitle ? h * 0.58 : h * 0.8, lw = img ? Math.min(w * 0.88, lh * img.width / img.height) : 0;
+      if (img) g.drawImage(img, (w - lw) / 2, subtitle ? h * 0.08 : (h - lh) / 2, lw, lh * (lw / (lh * img.width / img.height)));
+      else { g.font = `800 ${h * 0.42}px Inter, Arial, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#7AA342'; g.fillText('weschool', w / 2, h * 0.38); }
+      if (subtitle) { g.fillStyle = '#66518A'; g.font = `700 ${h * 0.13}px Inter, Arial, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(subtitle, w / 2, h * 0.84, w * 0.9); }
+      t.needsUpdate = true;
+    };
+    draw(null);
+    const img = new Image(); img.onload = () => draw(img); img.src = '../assets/weschool-logo.png';
+    return t;
+  }
+  const MONUMENT = [13.55, 13.55]; // on the plaza, in front of the fountain, facing visitors
+  { const g = new THREE.Group(); g.position.copy(at(...MONUMENT)); g.rotation.y = Math.PI / 4; scene.add(g);
+    g.add(mesh(B3(2.3, 0.22, 0.6), mat('#D6CCBA'), 0, 0.11, 0), mesh(B3(2.1, 0.9, 0.16), mat('#FFFFFF', 'monument'), 0, 0.67, 0));
+    g.add(mesh(B3(2.2, 0.07, 0.22), mat('#66518A'), 0, 1.15, 0), mesh(B3(2.1, 0.06, 0.18), mat('#7AA342'), 0, 0.25, 0));
+    const face = new THREE.Mesh(new THREE.PlaneGeometry(1.98, 0.8), new THREE.MeshStandardMaterial({ map: brandTexture(1180, 440, 'GLOBAL CITIZEN LEADERS'), roughness: 0.7 }));
+    face.position.set(0, 0.69, 0.085); g.add(face);
+    g.traverse(o => { if (o.isMesh) { o.userData.id = 'about'; pickables.push(o); } });
+    for (let i = flowers.length - 1; i >= 0; i--) if (Math.hypot(flowers[i][0] - MONUMENT[0], flowers[i][1] - MONUMENT[1]) < 1.5) flowers.splice(i, 1); // clear the plinth
+    for (let t = -0.95; t <= 0.95; t += 0.1) for (const lz of [0.42, 0.56]) flowers.push([MONUMENT[0] + (t + lz) * 0.707, MONUMENT[1] + (-t + lz) * 0.707]);
+  }
   inst(new THREE.IcosahedronGeometry(0.07, 0), new THREE.MeshStandardMaterial({ color: '#FFFFFF', roughness: 0.8 }), flowers, (o, [x, z]) => { o.position.copy(at(x, z, 0.08)); return FLOWERS[Math.floor(er() * FLOWERS.length)]; }, false);
   inst(new THREE.IcosahedronGeometry(0.11, 0), new THREE.MeshStandardMaterial({ color: '#FFFFFF', roughness: 0.9, flatShading: true }), flowers.filter((_, i) => i % 3 === 0), (o, [x, z]) => { o.position.copy(at(x + 0.05, z + 0.05, 0.05)); return '#6E9E48'; }, false);
 
@@ -118,6 +145,7 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, reduceMotion 
   const archMat = mat('#F0973A');
   for (const z of [2.75, 4.65]) scene.add(mesh(B3(0.3, 1.7, 0.3), mat('#F7F3EC'), at(1.2, z).x, 0.85, at(1.2, z).z));
   scene.add(mesh(B3(0.42, 0.34, 2.3), archMat, at(1.2, 3.7).x, 1.85, at(1.2, 3.7).z));
+  { const plate = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.3), new THREE.MeshStandardMaterial({ map: brandTexture(800, 160), roughness: 0.7 })); plate.position.copy(at(1.2, 3.7, 1.85)); plate.position.x += 0.215; plate.rotation.y = Math.PI / 2; scene.add(plate); }
 
   // Compound wall with pillars (gap at the entry path), sidewalk, ring road with zebra crossing, parking
   const WALL = [[-1.5, -1.5, 25.5, -1.5], [-1.5, 25.5, 25.5, 25.5], [25.5, -1.5, 25.5, 25.5], [-1.5, -1.5, -1.5, 2.9], [-1.5, 4.5, -1.5, 25.5]];
@@ -173,15 +201,43 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, reduceMotion 
   const BLOCK = [...BUILDINGS.map(([, x, z, w, d]) => [x - 0.7, z - 0.7, x + w + 0.7, z + d + 0.7]), ...[...PATHS, ...FORECOURTS].map(([x, z, w, d]) => [x - 0.45, z - 0.45, x + w + 0.45, z + d + 0.45]),
     [FARM[0], FARM[1], FARM[0] + FARM[2], FARM[1] + FARM[3]], [PARK[0] - 0.5, PARK[1] - 0.5, PARK[0] + PARK[2] + 0.5, PARK[1] + PARK[3] + 0.5],
     ...RING.map(([x, z, w, d]) => [x - 1.1, z - 1.1, x + w + 1.1, z + d + 1.1]), [-2.2, -2.2, 26.2, -0.8], [-2.2, 24.8, 26.2, 26.2], [-2.2, -2.2, -0.8, 26.2], [24.8, -2.2, 26.2, 26.2]];
-  const ROUND = [[12, 12, 3.0], ...TEAMS.map(([, x, z]) => [x, z, 1.9]), ...LAMPS.map(([x, z]) => [x, z, 0.6]), ...BENCHES.map(([x, z]) => [x, z, 0.9])];
+  const ROUND = [[12, 12, 3.0], [13.55, 13.55, 1.9], ...TEAMS.map(([, x, z]) => [x, z, 1.9]), ...LAMPS.map(([x, z]) => [x, z, 0.6]), ...BENCHES.map(([x, z]) => [x, z, 0.9])];
   const free = (x, z) => !BLOCK.some(([a, b, c, d]) => x > a && x < c && z > b && z < d) && !ROUND.some(([cx, cz, r]) => Math.hypot(x - cx, z - cz) < r);
+  /* City around the campus (WeSchool is in Matunga, Mumbai): concrete ground, streets, mid-rise blocks, small parks */
+  const KEEP = [-7.2, -7.2, 31.2, 31.2]; // ring road + avenue stay clear
+  for (const [x, z, w, d] of [[-36, -36, 96, 28.8], [-36, 31.2, 96, 28.8], [-36, -7.2, 28.8, 38.4], [31.2, -7.2, 28.8, 38.4]]) flat(x, z, w, d, -0.022, '#D9D4CA');
+  const STREETS = [[-36, -12.2, 96, 1.6], [-36, 35.6, 96, 1.6], [-12.2, -36, 1.6, 96], [35.6, -36, 1.6, 96],
+    [11.2, -36, 1.6, 31.6], [11.2, 28.2, 1.6, 31.8], [-36, 11.2, 31.6, 1.6], [28.2, 11.2, 31.8, 1.6]];
+  for (const [x, z, w, d] of STREETS) { const v = d > w; flat(x - (v ? 0.7 : 0), z - (v ? 0 : 0.7), w + (v ? 1.4 : 0), d + (v ? 0 : 1.4), -0.016, '#E4DED2'); flat(x, z, w, d, -0.01, '#8C919B'); }
+  const sdash = []; for (const [x, z, w, d] of STREETS) { const v = d > w; for (let t = 0.6; t < (v ? d : w); t += 1.3) sdash.push(v ? [x + 0.8, z + t, 1] : [x + t, z + 0.8, 0]); }
+  inst(B3(0.55, 0.01, 0.07), mat('#F4F1EA'), sdash, (o, [x, z, v]) => { o.position.copy(at(x, z, -0.004)); if (v) o.rotation.y = Math.PI / 2; }, false);
+  const hit = (r, list, m) => list.some(([x, z, w, d]) => r[0] < x + w + m && r[2] > x - m && r[1] < z + d + m && r[3] > z - m);
+  const PARKS = [];
+  for (let i = 0; i < 40 && PARKS.length < 6; i++) { const a = er() * Math.PI * 2, R = 24 + er() * 9, px = 12 + Math.cos(a) * R, pz = 12 + Math.sin(a) * R; if (!hit([px - 2.6, pz - 2.6, px + 2.6, pz + 2.6], STREETS, 0.9) && !PARKS.some(([qx, qz]) => Math.hypot(qx - px, qz - pz) < 9)) PARKS.push([px, pz]); }
+  for (const [px, pz] of PARKS) flat(px - 2.6, pz - 2.6, 5.2, 5.2, -0.008, '#B7D18C');
+  const blocks = [];
+  for (let i = 0; i < 1500 && blocks.length < 170; i++) {
+    const w = 1.8 + er() * 2.6, d = 1.8 + er() * 2.6, near = er() < 0.75; // most blocks hug the campus so it reads as a neighbourhood
+    const x = near ? -24 + er() * (72 - w) : -35 + er() * (94 - w), z = near ? -24 + er() * (72 - d) : -35 + er() * (94 - d), r = [x, z, x + w, z + d];
+    if (r[0] < KEEP[2] && r[2] > KEEP[0] && r[1] < KEEP[3] && r[3] > KEEP[1]) continue;
+    if (hit(r, STREETS, 0.9) || hit(r, [PARK], 0.6) || PARKS.some(([px, pz]) => Math.hypot(x + w / 2 - px, z + d / 2 - pz) < 4.3)) continue;
+    if (blocks.some(b => r[0] < b[0] + b[2] + 0.7 && r[2] > b[0] - 0.7 && r[1] < b[1] + b[3] + 0.7 && r[3] > b[1] - 0.7)) continue;
+    blocks.push([x, z, w, d, 1 + Math.floor(Math.pow(er(), 1.7) * 7)]);
+  }
+  const CITY = ['#ECE5D8', '#E2DCD2', '#D6DCE2', '#E8D9C6', '#CBD3DC', '#F0E9DC', '#DAD2C4'];
+  inst(B3(1, 1, 1), new THREE.MeshStandardMaterial({ color: '#FFFFFF', roughness: 0.9 }), blocks, (o, [x, z, w, d, f]) => { const h = f * 0.5 + 0.25; o.position.copy(at(x + w / 2, z + d / 2, h / 2)); o.scale.set(w, h, d); return CITY[Math.floor(er() * CITY.length)]; });
+  inst(B3(1, 1, 1), new THREE.MeshStandardMaterial({ color: '#7F9DB8', roughness: 0.3, metalness: 0.1 }), blocks.flatMap(([x, z, w, d, f]) => Array.from({ length: f }, (_, k) => [x, z, w, d, k])), (o, [x, z, w, d, k]) => { o.position.copy(at(x + w / 2, z + d / 2, 0.5 + k * 0.5)); o.scale.set(w + 0.02, 0.15, d + 0.02); }, false);
+  inst(new THREE.CylinderGeometry(0.2, 0.2, 0.32, 10), mat('#3E5F86'), blocks.filter(() => er() < 0.45), (o, [x, z, w, d, f]) => o.position.copy(at(x + w * 0.3, z + d * 0.3, f * 0.5 + 0.41)));
+  for (const [x, z, w, d] of blocks) BLOCK.push([x - 0.5, z - 0.5, x + w + 0.5, z + d + 0.5]);
+  for (const [x, z, w, d] of STREETS) BLOCK.push([x - 0.9, z - 0.9, x + w + 0.9, z + d + 0.9]);
   const trees = [];
   const plant = (x, z, kind) => { if (free(x, z) && !trees.some(t => Math.hypot(t[0] - x, t[1] - z) < 1.0)) trees.push([x, z, kind, 0.8 + er() * 0.45, er() * 6.28]); };
   const mixKind = () => { const r = er(); return r < 0.55 ? 'round' : r < 0.83 ? 'tall' : 'gulmohar'; };
   for (const [x, z] of TREES) plant(x, z, er() < 0.25 ? 'gulmohar' : 'round');
-  for (let t = -0.6; t < 25; t += 2.2) for (const [x, z] of [[t, -0.75], [t, 24.75], [-0.75, t], [24.75, t]]) plant(x + (er() - 0.5) * 0.5, z + (er() - 0.5) * 0.3, mixKind()); // inside the wall
-  for (let t = -5; t < 30; t += 2.4) for (const [x, z] of [[t, -5.6], [t, 29.4], [-5.6, t], [29.4, t]]) plant(x, z, (Math.round(t / 2.4) % 2) ? 'tall' : 'round');      // avenue along the road
-  for (let i = 0; i < 420; i++) { const x = -20 + er() * 64, z = -20 + er() * 64; if (x > -6.5 && x < 30.5 && z > -6.5 && z < 30.5) continue; plant(x, z, mixKind()); } // countryside
+  for (let t = -0.6; t < 25; t += 2.9) for (const [x, z] of [[t, -0.75], [t, 24.75], [-0.75, t], [24.75, t]]) plant(x + (er() - 0.5) * 0.5, z + (er() - 0.5) * 0.3, mixKind()); // inside the wall
+  for (let t = -5; t < 30; t += 4.2) for (const [x, z] of [[t, -5.6], [t, 29.4], [-5.6, t], [29.4, t]]) plant(x, z, (Math.round(t / 4.2) % 2) ? 'tall' : 'round');      // avenue along the road
+  for (const [x, z, w, d] of STREETS) { const v = d > w; for (let t = 2; t < (v ? d : w); t += 5.5) for (const side of [-1.5, d > w ? 3.1 : 3.1]) plant(v ? x + side : x + t, v ? z + t : z + side, er() < 0.7 ? 'round' : 'tall'); } // street trees
+  for (const [px, pz] of PARKS) for (let i = 0; i < 6; i++) { const a = er() * 6.28, r = 0.6 + er() * 1.6; plant(px + Math.cos(a) * r, pz + Math.sin(a) * r, mixKind()); } // neighbourhood parks
   for (const [x, z] of [[-0.75, 2.45], [-0.75, 4.95], [-6.4, 2.45], [-6.4, 4.95]]) trees.push([x, z, 'palm', 1, er() * 6.28]); // palms at the entrance
 
   const leafMat = new THREE.MeshStandardMaterial({ color: '#FFFFFF', roughness: 0.9, flatShading: true });
@@ -239,7 +295,7 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, reduceMotion 
   }
 
   /* ---------- Buildings: an outer shell that can open up, and a furnished interior ---------- */
-  const pickables = [], objects = {};
+  const objects = {};
   let flagMesh = null;
   const hipRoof = (w, d, h) => { const g = new THREE.ConeGeometry(1, h, 4); g.rotateY(Math.PI / 4); return [g, w / 1.414 * 1.12, d / 1.414 * 1.12]; };
   const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
@@ -576,7 +632,7 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, reduceMotion 
     bulb.add(mesh(new THREE.SphereGeometry(0.17, 16, 12), bulbMat, 0, 0, 0, false), mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.1, 10), mat('#B9B3C8'), 0, -0.17, 0, false));
     bulb.traverse(o => { if (o.isMesh) { o.userData.id = id; pickables.push(o); } });
     scene.add(bulb);
-    teams[id] = { c, bulb, top: new THREE.Vector3(c.x, 2.1, c.z), r: 1.45 };
+    teams[id] = { c, bulb, top: new THREE.Vector3(c.x, 1.95, c.z), r: 1.45 };
   }
   // Students chatting on benches
   for (const [x, z, rot] of BENCHES) for (const s of [-0.25, 0.25]) {

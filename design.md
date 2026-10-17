@@ -222,14 +222,16 @@ Native `<dialog>` showing the full student poster image (`assets/poster-*.jpg`),
 - **Kaleidosync silk farm:** a soil plot with mulberry crop rows.
 - **Compound wall** with pillars (purple caps), open at the entry path; palms flank the entrance.
 - **Outside the wall:** a sidewalk, a **ring road** with lane dashes and a zebra crossing, four cars driving on the left, and a visitor parking lot with parked cars.
-- **Trees, by species:** round shade trees (3 overlapping canopy blobs in varied greens), tall Ashoka-style trees (stacked cones), flowering **Gulmohar** (wide orange-red canopy) and palms. They are placed by a collision-aware scatter: along the inside of the wall, as an avenue outside the road, and through the countryside. Trees never land on paths, buildings, tables, lamps, benches or roads.
+- **City neighbourhood** (WeSchool is in Matunga, Mumbai): concrete urban ground beyond the ring road, an outer street grid plus four streets leading away from the campus (with sidewalks and lane markings), and about 170 mid-rise blocks in muted plaster colours. The blocks have glass floor bands and rooftop water tanks, and most sit close to the campus. There are 6 small neighbourhood parks.
+- **WeSchool branding:** a stone monument on the plaza in front of the fountain, facing visitors, with the WeSchool logo (`assets/weschool-logo.png`) and "GLOBAL CITIZEN LEADERS" on a white panel, a purple cap, a green base stripe and flowers in front (clicking it opens Welcome). The same logo is on the entrance gate arch.
+- **Trees, by species:** round shade trees (3 overlapping canopy blobs in varied greens), tall Ashoka-style trees (stacked cones), flowering **Gulmohar** (wide orange-red canopy) and palms. They are placed by a collision-aware scatter: along the inside of the wall, as an avenue outside the road, as **street trees** along city streets, and in small parks (no forest). Trees never land on paths, buildings, tables, lamps, benches, roads or the monument.
 - **Smaller greenery:** hedges along building fronts (gap at the door), scattered shrubs, and flower beds around the plaza and beside each forecourt.
 - **Furniture:** benches with seat, backrest and legs; street lamps with an arm and a glowing head that faces the campus centre.
 - **Building detail:** stone plinth, cornice, framed glass windows, and a **name signboard** (canvas texture in the roof colour) on the camera-facing wall. Rooftops have AC units on flat roofs, **solar panels** on the Innovation Lab and a water tank on the Main Block; they lift away with the roof. The Research Library's portico columns flank its door.
 
 Everything repeated is **instanced** (one draw call per part type, with per-instance colours).
 
-**Student teams** (one per past project, at a round table with laptops and a glowing bulb): IDFC (7.6, 7.6), Deloitte (16.4, 7.6), Govardhan (7.6, 16.4), AuraPay (16.4, 16.4), Kaleidosync (0.4, 14.8).
+**Student teams** (one per past project, at a round table with laptops and a glowing bulb): IDFC (7.6, 7.6), Deloitte (16.4, 7.6), Govardhan (7.6, 16.4), AuraPay (17.7, 17.7), Kaleidosync (0.4, 14.8).
 
 **Selection visuals:** purple edge outline, bobbing purple pin, and a pulsing ring (team selection shows the ring only). Hovering a building tints it. The **orange spotlight ring** under the live group grows while the group is working.
 
@@ -325,7 +327,7 @@ GCL/
 - **No build step:** static files, Three.js from jsDelivr.
 - **Local preview:** `python3 -m http.server 8765 --directory GCL`, then open `/site/` (configured in `.claude/launch.json`).
 - **Deploy:** commit, `git push campus main`; GitHub Pages publishes the repo root in about a minute. The local `main` tracks `campus/main`. The old `weschool-gcl` repo (remote `origin`) is the old site and must not be pushed to.
-- **Cache busting:** every asset URL carries `?v=N` (currently **15**) in `site/index.html` (CSS and main.js) and `site/main.js` (projects, data, scene imports). **Bump N on every deploy**, or returning visitors may mix old and new files.
+- **Cache busting:** every asset URL carries `?v=N` (currently **16**) in `site/index.html` (CSS and main.js) and `site/main.js` (projects, data, scene imports). **Bump N on every deploy**, or returning visitors may mix old and new files.
 - **Connect the form:** deploy `apps-script/Code.gs` as a Google Apps Script Web App (Execute as me, access Anyone) and paste its `/exec` URL into `SCRIPT_URL` at the top of `site/main.js`.
 - **Add a partner project:**
   1. Add an entry to `projects.js` and a poster to `assets/`.

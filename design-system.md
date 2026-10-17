@@ -271,7 +271,8 @@ Native `<dialog>`, centred, max 900px wide by 92vh, radius `--r`, scrollable, st
 - **Ground:** natural grass with vertex-colour variation (`#B7D18C` blended with drier and lusher greens). Maintained lawns get **mowing stripes**. Paving is warm stone `#E6DCC8` with darker edging `#CDBFA6`.
 - **Buildings:** warm white `#FBF8F2` with a stone plinth and cornice; white-framed blue glass windows `#8FB3D1`; coloured **roofs** carry meaning; signboards in the roof colour.
 - **Nature:** several tree species (rounded shade trees, tall conifer-style trees, a flowering accent tree, palms at entrances), trunks `#8A6E52`, foliage in 4–5 greens via per-instance colour, plus hedges, shrubs and flower beds.
-- **Context makes it real:** a boundary wall, roads with markings, slow traffic, parking and a surrounding landscape stop the world from floating in a void.
+- **Context makes it real:** a boundary wall, roads with markings, slow traffic and parking, and a surrounding context that **matches the real location** (e.g. a city neighbourhood of low-poly blocks for an urban campus, not a forest). Keep the surroundings muted so the main world stays the hero; haze fades the far edge.
+- **Brand in the world:** put the real logo on a physical object at the focal point (a monument or plinth facing the camera) and at the entrance, as a canvas texture drawn from the logo file with a text fallback.
 
 ### 5.3 Modelling rules
 - **Low-poly primitives only:** boxes, cylinders, cones, spheres, capsules. No textures except tiny canvas sprites if unavoidable.
