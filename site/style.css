@@ -36,6 +36,7 @@ small { font-size: 11px; color: var(--muted); }
 .btn:hover { transform: translateY(-1px); }
 .btn.primary { background: var(--purple); color: #fff; } .btn.primary:hover { background: #57447A; }
 .btn.soft { background: var(--purple-l); color: var(--purple); }
+.topbar .btn, .program, .live { white-space: nowrap; }
 .btn.wide { width: 100%; padding: 13px; }
 .icon { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; color: var(--faint); flex: none; }
 .icon:hover { background: #F4F2F9; color: var(--ink); }
@@ -105,6 +106,11 @@ kbd { font: 600 11px Inter; border: 1px solid var(--line); border-radius: 5px; p
 .howto { list-style: none; display: grid; gap: 8px; background: #F7F5FB; border-radius: 12px; padding: 12px 14px; }
 .howto li { display: flex; gap: 10px; align-items: center; font-size: 12.5px; color: #3E3A52; }
 .howto .ms { color: var(--purple); }
+.benefits { list-style: none; display: grid; gap: 10px; }
+.benefits li { display: flex; gap: 11px; align-items: flex-start; }
+.benefits .tile { width: 30px; height: 30px; flex: none; } .benefits .tile .ms { font-size: 18px; color: #fff; }
+.benefits b { display: block; font-size: 13px; } .benefits small { display: block; color: var(--muted); font-size: 12px; line-height: 1.4; margin-top: 1px; }
+.topbar .why .ms { font-size: 18px; }
 .status { display: flex; align-items: center; gap: 8px; }
 .progress { height: 6px; background: #ECE8F4; border-radius: 999px; overflow: hidden; }
 .progress i { display: block; height: 100%; width: var(--w); background: var(--purple); border-radius: 999px; transition: width .5s; }
@@ -262,6 +268,7 @@ label.check input { width: 17px; height: 17px; margin: 0; accent-color: var(--pu
   .grow { display: block; }
   .topbar .btn { font-size: 12.5px; padding: 9px 14px; }
   .topbar .long { display: none; } .topbar .short { display: inline; }
+  .topbar .why { display: none; } /* phones reach it from the welcome panel */
   .brand img { height: 28px; }
   .credit { position: static; transform: none; background: none; padding: 0; font-size: 10px; line-height: 1.25; white-space: normal; text-align: center; flex: 1; min-width: 0; }
   .grow { display: none !important; }

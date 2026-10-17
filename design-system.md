@@ -210,6 +210,7 @@ Content types:
 | Step / place | Status chip, progress bar, 3–4 detail rows (label left, value right), accent **"Your role"** box if the visitor takes part, evidence (data bars or bullet list), related-item card, primary + "Next →" |
 | Item (case study) | Status (live / complete / archived), media thumbnail (opens viewer), stacked rows (uppercase labels), credits, primary + secondary |
 | Category (people / group) | Lead sentence, stacked rows, related items, CTA |
+| Value proposition ("Why partner") | Lead sentence, 4–6 benefits (coloured icon tile + bold title + one muted line, each a concrete outcome rather than a slogan), a short "What it takes from you" effort list, social-proof cards, primary conversion CTA. Reachable from the top bar, Welcome and the audience's category card; deep-linkable |
 
 Close returns to Welcome. On phones the panel becomes the bottom sheet (§3.3).
 
@@ -271,7 +272,7 @@ Native `<dialog>`, centred, max 900px wide by 92vh, radius `--r`, scrollable, st
 - **Ground:** natural grass with vertex-colour variation (`#B7D18C` blended with drier and lusher greens). Maintained lawns get **mowing stripes**. Paving is warm stone `#E6DCC8` with darker edging `#CDBFA6`.
 - **Buildings:** warm white `#FBF8F2` with a stone plinth and cornice; white-framed blue glass windows `#8FB3D1`; coloured **roofs** carry meaning; signboards in the roof colour.
 - **Nature:** several tree species (rounded shade trees, tall conifer-style trees, a flowering accent tree, palms at entrances), trunks `#8A6E52`, foliage in 4–5 greens via per-instance colour, plus hedges, shrubs and flower beds.
-- **Context makes it real:** a boundary wall, roads with markings, slow traffic and parking, and a surrounding context that **matches the real location** (e.g. a city neighbourhood of low-poly blocks for an urban campus, not a forest). Keep the surroundings muted so the main world stays the hero; haze fades the far edge.
+- **Context makes it real:** a boundary wall, roads with markings, slow traffic and parking, and then **stop**. Present the world as a model on a plinth (a turf slab, a thin brand-colour trim, a light plinth) over a plain floor that fades into the haze. Busy surroundings (forests, city blocks) compete with the story and look less professional.
 - **Brand in the world:** put the real logo on a physical object at the focal point (a monument or plinth facing the camera) and at the entrance, as a canvas texture drawn from the logo file with a text fallback.
 
 ### 5.3 Modelling rules

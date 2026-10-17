@@ -1,6 +1,6 @@
 // Bump ?v= on every deploy (here and in index.html) so browsers never mix old and new files.
-import { PROJECTS } from './projects.js?v=17';
-import { STAGES, ROLE, PEOPLE } from './data.js?v=17';
+import { PROJECTS } from './projects.js?v=18';
+import { STAGES, ROLE, PEOPLE, WHY } from './data.js?v=18';
 
 // Google Apps Script Web App URL (see ../apps-script/Code.gs). Empty = form shows "not connected".
 const SCRIPT_URL = '';
@@ -22,10 +22,10 @@ let cameraOn = false;     // is the auto-camera following the live group?       
 
 /* ---------- Selection ---------- */
 function select(id, { fly = true } = {}) {
-  if (id && !S[id] && !P[id] && !PEOPLE[id] && !(id.startsWith('rep:') && P[id.slice(4)])) id = null;
+  if (id && id !== 'why' && !S[id] && !P[id] && !PEOPLE[id] && !(id.startsWith('rep:') && P[id.slice(4)])) id = null;
   current = id;
   if (phone()) insp.classList.toggle('peek', !id || !!P[id]); // phones: keep the map visible for the welcome and live feeds; tap to expand
-  map?.select(id, { fly });
+  map?.select(id === 'why' ? 'companies' : id, { fly }); // the benefits panel lights up the company mentors
   if (P[id]) map?.watch(id); // picking a project starts (or keeps) its live feed
   renderInspector(); renderTracker(); renderRows();
   history.replaceState(null, '', id ? '#' + id.replace('rep:', '') : location.pathname);
@@ -56,7 +56,20 @@ function renderInspector() {
         <li>${ms('meeting_room')}<span>Buildings <b>open up</b> when the team works inside: watch each step happen</span></li>
         <li>${ms('ads_click')}<span>Click any building, team or person · drag to pan · scroll to zoom</span></li>
       </ul>
-      <div class="actions"><button class="btn primary" data-action="watchlive">${ms('play_arrow')}Watch it live</button><button class="btn soft" data-select="challenge">Start the tour</button></div>`;
+      <div class="actions"><button class="btn primary" data-action="watchlive">${ms('play_arrow')}Watch it live</button><button class="btn soft" data-select="why">Why partner?</button></div>`;
+    return;
+  }
+  if (current === 'why') {
+    insp.innerHTML = `
+      ${head(ms('handshake'), '#E8892B', 'FOR COMPANIES · WHY PARTNER', 'Why bring us your challenge?', 'What your organisation gains from GCL')}
+      <p class="lead">${WHY.lead}</p>
+      <ul class="benefits">${WHY.benefits.map(([icon, c, t, d]) => `<li><span class="tile" style="background:${c}">${ms(icon)}</span><span><b>${t}</b><small>${d}</small></span></li>`).join('')}</ul>
+      <div class="egt"><b>What it takes from you</b></div>
+      ${rows(WHY.effort)}
+      <div class="egt"><b>Companies who already have</b></div>
+      ${PROJECTS.slice(0, 3).map(projCard).join('')}
+      <div class="actions"><button class="btn primary" data-action="form">${ms('add')}Submit a Challenge</button><button class="btn soft" data-action="watchlive">${ms('play_arrow')}Watch live</button></div>`;
+    insp.querySelector('.rows').classList.add('stack');
     return;
   }
   const g = PEOPLE[current];
@@ -67,7 +80,7 @@ function renderInspector() {
       ${rows(g.rows)}
       <div class="egt"><b>Live projects so far</b></div>
       ${PROJECTS.slice(0, 3).map(projCard).join('')}
-      <div class="actions">${g.cta === 'form' ? `<button class="btn primary" data-action="form">Submit a Challenge</button>` : `<button class="btn primary" data-select="${g.cta}">See them at work ${ms('arrow_forward')}</button>`}<button class="btn soft" data-select="challenge">How it works</button></div>`;
+      <div class="actions">${g.cta === 'form' ? `<button class="btn primary" data-action="form">Submit a Challenge</button>` : `<button class="btn primary" data-select="${g.cta}">See them at work ${ms('arrow_forward')}</button>`}<button class="btn soft" data-select="${g.cta === 'form' ? 'why' : 'challenge'}">${g.cta === 'form' ? 'Why partner?' : 'How it works'}</button></div>`;
     insp.querySelector('.rows').classList.add('stack');
     return;
   }
@@ -229,7 +242,7 @@ addEventListener('hashchange', () => select(location.hash.slice(1) || null));
 const initial = location.hash.slice(1) || null;
 select(initial, { fly: false });
 
-import('./scene.js?v=17').then(({ createScene }) => {
+import('./scene.js?v=18').then(({ createScene }) => {
   map = createScene($('#scene'), $('#labels'), {
     onSelect: id => select(id), reduceMotion,
     onCamera: on => { cameraOn = on; renderCamToggle(); },

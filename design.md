@@ -117,7 +117,7 @@ Top to bottom:
 ## 4. Components
 
 ### 4.1 Top bar
-WeSchool logo (`assets/weschool-logo.png`), "GCL Campus / Global Citizen Leaders"; search (`/` shortcut, Enter opens the first result); program selector "GCL 2026-27 · Trimester II · Module I"; green pulsing "Accepting challenges" pill; primary **Submit a Challenge** button, which opens the form drawer.
+WeSchool logo (`assets/weschool-logo.png`), "GCL Campus / Global Citizen Leaders"; search (`/` shortcut, Enter opens the first result); program selector "GCL 2026-27 · Trimester II · Module I"; green pulsing "Accepting challenges" pill; soft **Why partner** button (opens the Why partner panel; hidden on phones, where the Welcome panel links to it); primary **Submit a Challenge** button, which opens the form drawer.
 
 ### 4.2 KPI cards
 Tile + label + value + green delta + sub-line:
@@ -139,10 +139,11 @@ Three chips: **Companies** (orange), **Students** (teal), **Faculty** (purple). 
 
 | State | Header (tile · kicker · title · sub) | Body |
 |---|---|---|
-| **Welcome** (nothing selected) | school icon · `WELCOME · GCL 2026-27` · "Welcome to the GCL Campus" | Pitch paragraph, CCL/DI line, a how-to box (role legend + "buildings open up"), **▶ Watch it live** / Start the tour |
+| **Welcome** (nothing selected) | school icon · `WELCOME · GCL 2026-27` · "Welcome to the GCL Campus" | Pitch paragraph, CCL/DI line, a how-to box (role legend + "buildings open up"), **▶ Watch it live** / Why partner? |
+| **Why partner** (`#why`) | handshake icon in orange · `FOR COMPANIES · WHY PARTNER` · "Why bring us your challenge?" | Lead sentence, 6 benefits (icon tile, title, one line: fresh outside-in thinking, research you'd otherwise commission, a working prototype, a commercially feasible solution, an early look at future hires, impact and employer brand), "What it takes from you" rows, 3 past-partner cards, **Submit a Challenge** / Watch live. The map glows the company mentors. Copy lives in `WHY` in `data.js` |
 | **Stage** | stage number (★ orange for Challenge) · `STAGE n · TRIMESTER …` · stage title · building | Touchpoint chip + "Step n of 6", progress bar, 4 detail rows, **Your role** box (if a company touchpoint), evidence (IDFC % bars at Insights, otherwise past-project bullets), project card, **View … project** / **Next stage →** |
 | **Project** | company initial · `PARTNER PROJECT · DOMAIN` · title · company | Status chip (**● Live feed playing** / **✓ Project complete · Up next** / **Live project · completed**), poster thumbnail, Challenge / Stakeholders / Insight / Prototype / Solution, team & mentors, **Replay from start** / View poster |
-| **People** (Companies / Students / Faculty) | role icon in role colour · role kicker · title | Lead sentence, 4 rows, first 3 project cards, a role-specific CTA, How it works |
+| **People** (Companies / Students / Faculty) | role icon in role colour · role kicker · title | Lead sentence, 4 rows, first 3 project cards, a role-specific CTA, How it works (Companies: Why partner?) |
 
 The header also has a mobile-only expand/collapse chevron and a close (✕) button, which returns to Welcome. On desktop the action row is sticky at the bottom of the inspector with a solid white background.
 
@@ -225,9 +226,9 @@ Native `<dialog>` showing the full student poster image (`assets/poster-*.jpg`),
 - **Kaleidosync silk farm:** a soil plot with mulberry crop rows.
 - **Compound wall** with pillars (purple caps), open at the entry path; palms flank the entrance.
 - **Outside the wall:** a sidewalk, a **ring road** with lane dashes and a zebra crossing, four cars driving on the left, and a visitor parking lot with parked cars.
-- **City neighbourhood** (WeSchool is in Matunga, Mumbai): concrete urban ground beyond the ring road, an outer street grid plus four streets leading away from the campus (with sidewalks and lane markings), and about 170 mid-rise blocks in muted plaster colours. The blocks have glass floor bands and rooftop water tanks, and most sit close to the campus. There are 6 small neighbourhood parks.
+- **Presentation base (no city):** the campus, ring road, avenue and visitor parking sit on a 46×46 grass slab with a warm-white plinth (0.9 tall) and a thin brand-green trim under the turf, like an architect's model. Below it is a plain pale floor (`#E6EBE6`) that fades into the haze, so nothing outside the campus competes for attention.
 - **WeSchool branding:** a stone monument on the plaza in front of the fountain, facing visitors, with the WeSchool logo (`assets/weschool-logo.png`) and "GLOBAL CITIZEN LEADERS" on a white panel, a purple cap, a green base stripe and flowers in front (clicking it opens Welcome). The same logo is on the entrance gate arch.
-- **Trees, by species:** round shade trees (3 overlapping canopy blobs in varied greens), tall Ashoka-style trees (stacked cones), flowering **Gulmohar** (wide orange-red canopy) and palms. They are placed by a collision-aware scatter: along the inside of the wall, as an avenue outside the road, as **street trees** along city streets, and in small parks (no forest). Trees never land on paths, buildings, tables, lamps, benches, roads or the monument.
+- **Trees, by species:** round shade trees (3 overlapping canopy blobs in varied greens), tall Ashoka-style trees (stacked cones), flowering **Gulmohar** (wide orange-red canopy) and palms. They are placed by a collision-aware scatter: along the inside of the wall, and as an avenue outside the road (no forest, nothing beyond the plinth). Trees never land on paths, buildings, tables, lamps, benches, roads or the monument.
 - **Smaller greenery:** hedges along building fronts (gap at the door), scattered shrubs, and flower beds around the plaza and beside each forecourt.
 - **Furniture:** benches with seat, backrest and legs; street lamps with an arm and a glowing head that faces the campus centre.
 - **Building detail:** stone plinth, cornice, framed glass windows, and a **name signboard** (canvas texture in the roof colour) on the camera-facing wall. Rooftops have AC units on flat roofs, **solar panels** on the Innovation Lab and a water tank on the Main Block; they lift away with the roof. The Research Library's portico columns flank its door.
@@ -293,7 +294,7 @@ Each stage building has two layers:
 ## 6. Interaction model
 
 - **Selectable things:** stages (buildings, labels, tracker steps, list rows), projects (teams, labels, list rows, cards), and people groups (legend chips, or clicking a person).
-- **Deep links:** `#<stage>` (e.g. `#insights`), `#<project>` (e.g. `#aurapay`, which starts its live feed), `#students` / `#faculty` / `#companies`. The URL hash updates on selection; invalid hashes fall back to Welcome.
+- **Deep links:** `#<stage>` (e.g. `#insights`), `#<project>` (e.g. `#aurapay`, which starts its live feed), `#students` / `#faculty` / `#companies`, `#why` (benefits for companies). The URL hash updates on selection; invalid hashes fall back to Welcome.
 - **Keyboard:** `/` focuses search · `Enter` in search opens the first result · `Esc` closes the panel. Native `<dialog>` focus handling applies to the drawer and the poster.
 - **Search** filters stages and projects together across all their text.
 - **Tour:** Start the tour → Challenge → Next stage → … → Submit a Challenge.
@@ -315,7 +316,7 @@ GCL/
     ├── style.css           # tokens, components, breakpoints
     ├── main.js             # state, selection, inspector/tracker/list rendering, form, story wiring
     ├── scene.js            # 3D campus, people, story controller, camera, picking, labels
-    ├── data.js             # STAGES (+ plain/who/you/live copy), ROLE, PEOPLE
+    ├── data.js             # STAGES (+ plain/who/you/live copy), ROLE, PEOPLE, WHY (benefits copy)
     └── projects.js         # PROJECTS: id, org, domain, title, image, challenge, stakeholders, insight, prototype, outcome, team, mentor
 ```
 
@@ -330,7 +331,7 @@ GCL/
 - **No build step:** static files, Three.js from jsDelivr.
 - **Local preview:** `python3 -m http.server 8765 --directory GCL`, then open `/site/` (configured in `.claude/launch.json`).
 - **Deploy:** commit, `git push campus main`; GitHub Pages publishes the repo root in about a minute. The local `main` tracks `campus/main`. The old `weschool-gcl` repo (remote `origin`) is the old site and must not be pushed to.
-- **Cache busting:** every asset URL carries `?v=N` (currently **17**) in `site/index.html` (CSS and main.js) and `site/main.js` (projects, data, scene imports). **Bump N on every deploy**, or returning visitors may mix old and new files.
+- **Cache busting:** every asset URL carries `?v=N` (currently **18**) in `site/index.html` (CSS and main.js) and `site/main.js` (projects, data, scene imports). **Bump N on every deploy**, or returning visitors may mix old and new files.
 - **Connect the form:** deploy `apps-script/Code.gs` as a Google Apps Script Web App (Execute as me, access Anyone) and paste its `/exec` URL into `SCRIPT_URL` at the top of `site/main.js`.
 - **Add a partner project:**
   1. Add an entry to `projects.js` and a poster to `assets/`.

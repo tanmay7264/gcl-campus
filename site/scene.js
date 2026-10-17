@@ -74,15 +74,20 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, onCamera, red
     scene.add(im); return im;
   };
 
-  // Natural grass: a big ground with gentle colour variation
-  { const g = new THREE.PlaneGeometry(96, 96, 96, 96); g.rotateX(-Math.PI / 2);
+  // Presentation base: the campus sits on a grass slab with a clean plinth, like an architect's model, over a plain floor that fades into the haze
+  const SLAB = 46; // grid -11..35 around the 0..24 campus (covers ring road, avenue and visitor parking)
+  { const g = new THREE.PlaneGeometry(SLAB, SLAB, 46, 46); g.rotateX(-Math.PI / 2);
     const P = g.attributes.position, cols = [], base = new THREE.Color('#B7D18C'), dry = new THREE.Color('#C9D79C'), lush = new THREE.Color('#A2C478'), c = new THREE.Color();
     for (let i = 0; i < P.count; i++) {
       const x = P.getX(i), z = P.getZ(i), n = (Math.sin(x * 0.31) + Math.sin(z * 0.27 + 1.3) + Math.sin((x + z) * 0.11 + 2)) / 6 + 0.5 + (er() - 0.5) * 0.12;
       c.copy(base).lerp(n > 0.5 ? dry : lush, Math.min(1, Math.abs(n - 0.5) * 2.2)); cols.push(c.r, c.g, c.b);
     }
     g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
-    const ground = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 })); ground.position.y = -0.03; ground.receiveShadow = true; scene.add(ground); }
+    const ground = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 })); ground.position.copy(at(12, 12, -0.03)); ground.receiveShadow = true; scene.add(ground);
+    scene.add(mesh(B3(SLAB, 0.9, SLAB), mat('#F3EFE7'), 0, -0.48, 0));                     // plinth
+    scene.add(mesh(B3(SLAB + 0.04, 0.07, SLAB + 0.04), mat('#7AA342'), 0, -0.085, 0, false)); // brand-green trim under the turf
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshStandardMaterial({ color: '#E6EBE6', roughness: 1 }));
+    floor.rotation.x = -Math.PI / 2; floor.position.y = -0.93; floor.receiveShadow = true; scene.add(floor); }
 
   // Campus grounds inside the compound wall
   flat(-1.5, -1.5, 27, 27, -0.005, '#BCD794');
@@ -203,41 +208,12 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, onCamera, red
     ...RING.map(([x, z, w, d]) => [x - 1.1, z - 1.1, x + w + 1.1, z + d + 1.1]), [-2.2, -2.2, 26.2, -0.8], [-2.2, 24.8, 26.2, 26.2], [-2.2, -2.2, -0.8, 26.2], [24.8, -2.2, 26.2, 26.2]];
   const ROUND = [[12, 12, 3.0], [13.55, 13.55, 1.9], ...TEAMS.map(([, x, z]) => [x, z, 1.9]), ...LAMPS.map(([x, z]) => [x, z, 0.6]), ...BENCHES.map(([x, z]) => [x, z, 0.9])];
   const free = (x, z) => !BLOCK.some(([a, b, c, d]) => x > a && x < c && z > b && z < d) && !ROUND.some(([cx, cz, r]) => Math.hypot(x - cx, z - cz) < r);
-  /* City around the campus (WeSchool is in Matunga, Mumbai): concrete ground, streets, mid-rise blocks, small parks */
-  const KEEP = [-7.2, -7.2, 31.2, 31.2]; // ring road + avenue stay clear
-  for (const [x, z, w, d] of [[-36, -36, 96, 28.8], [-36, 31.2, 96, 28.8], [-36, -7.2, 28.8, 38.4], [31.2, -7.2, 28.8, 38.4]]) flat(x, z, w, d, -0.022, '#D9D4CA');
-  const STREETS = [[-36, -12.2, 96, 1.6], [-36, 35.6, 96, 1.6], [-12.2, -36, 1.6, 96], [35.6, -36, 1.6, 96],
-    [11.2, -36, 1.6, 31.6], [11.2, 28.2, 1.6, 31.8], [-36, 11.2, 31.6, 1.6], [28.2, 11.2, 31.8, 1.6]];
-  for (const [x, z, w, d] of STREETS) { const v = d > w; flat(x - (v ? 0.7 : 0), z - (v ? 0 : 0.7), w + (v ? 1.4 : 0), d + (v ? 0 : 1.4), -0.016, '#E4DED2'); flat(x, z, w, d, -0.01, '#8C919B'); }
-  const sdash = []; for (const [x, z, w, d] of STREETS) { const v = d > w; for (let t = 0.6; t < (v ? d : w); t += 1.3) sdash.push(v ? [x + 0.8, z + t, 1] : [x + t, z + 0.8, 0]); }
-  inst(B3(0.55, 0.01, 0.07), mat('#F4F1EA'), sdash, (o, [x, z, v]) => { o.position.copy(at(x, z, -0.004)); if (v) o.rotation.y = Math.PI / 2; }, false);
-  const hit = (r, list, m) => list.some(([x, z, w, d]) => r[0] < x + w + m && r[2] > x - m && r[1] < z + d + m && r[3] > z - m);
-  const PARKS = [];
-  for (let i = 0; i < 40 && PARKS.length < 6; i++) { const a = er() * Math.PI * 2, R = 24 + er() * 9, px = 12 + Math.cos(a) * R, pz = 12 + Math.sin(a) * R; if (!hit([px - 2.6, pz - 2.6, px + 2.6, pz + 2.6], STREETS, 0.9) && !PARKS.some(([qx, qz]) => Math.hypot(qx - px, qz - pz) < 9)) PARKS.push([px, pz]); }
-  for (const [px, pz] of PARKS) flat(px - 2.6, pz - 2.6, 5.2, 5.2, -0.008, '#B7D18C');
-  const blocks = [];
-  for (let i = 0; i < 1500 && blocks.length < 170; i++) {
-    const w = 1.8 + er() * 2.6, d = 1.8 + er() * 2.6, near = er() < 0.75; // most blocks hug the campus so it reads as a neighbourhood
-    const x = near ? -24 + er() * (72 - w) : -35 + er() * (94 - w), z = near ? -24 + er() * (72 - d) : -35 + er() * (94 - d), r = [x, z, x + w, z + d];
-    if (r[0] < KEEP[2] && r[2] > KEEP[0] && r[1] < KEEP[3] && r[3] > KEEP[1]) continue;
-    if (hit(r, STREETS, 0.9) || hit(r, [PARK], 0.6) || PARKS.some(([px, pz]) => Math.hypot(x + w / 2 - px, z + d / 2 - pz) < 4.3)) continue;
-    if (blocks.some(b => r[0] < b[0] + b[2] + 0.7 && r[2] > b[0] - 0.7 && r[1] < b[1] + b[3] + 0.7 && r[3] > b[1] - 0.7)) continue;
-    blocks.push([x, z, w, d, 1 + Math.floor(Math.pow(er(), 1.7) * 7)]);
-  }
-  const CITY = ['#ECE5D8', '#E2DCD2', '#D6DCE2', '#E8D9C6', '#CBD3DC', '#F0E9DC', '#DAD2C4'];
-  inst(B3(1, 1, 1), new THREE.MeshStandardMaterial({ color: '#FFFFFF', roughness: 0.9 }), blocks, (o, [x, z, w, d, f]) => { const h = f * 0.5 + 0.25; o.position.copy(at(x + w / 2, z + d / 2, h / 2)); o.scale.set(w, h, d); return CITY[Math.floor(er() * CITY.length)]; });
-  inst(B3(1, 1, 1), new THREE.MeshStandardMaterial({ color: '#7F9DB8', roughness: 0.3, metalness: 0.1 }), blocks.flatMap(([x, z, w, d, f]) => Array.from({ length: f }, (_, k) => [x, z, w, d, k])), (o, [x, z, w, d, k]) => { o.position.copy(at(x + w / 2, z + d / 2, 0.5 + k * 0.5)); o.scale.set(w + 0.02, 0.15, d + 0.02); }, false);
-  inst(new THREE.CylinderGeometry(0.2, 0.2, 0.32, 10), mat('#3E5F86'), blocks.filter(() => er() < 0.45), (o, [x, z, w, d, f]) => o.position.copy(at(x + w * 0.3, z + d * 0.3, f * 0.5 + 0.41)));
-  for (const [x, z, w, d] of blocks) BLOCK.push([x - 0.5, z - 0.5, x + w + 0.5, z + d + 0.5]);
-  for (const [x, z, w, d] of STREETS) BLOCK.push([x - 0.9, z - 0.9, x + w + 0.9, z + d + 0.9]);
   const trees = [];
   const plant = (x, z, kind) => { if (free(x, z) && !trees.some(t => Math.hypot(t[0] - x, t[1] - z) < 1.0)) trees.push([x, z, kind, 0.8 + er() * 0.45, er() * 6.28]); };
   const mixKind = () => { const r = er(); return r < 0.55 ? 'round' : r < 0.83 ? 'tall' : 'gulmohar'; };
   for (const [x, z] of TREES) plant(x, z, er() < 0.25 ? 'gulmohar' : 'round');
   for (let t = -0.6; t < 25; t += 2.9) for (const [x, z] of [[t, -0.75], [t, 24.75], [-0.75, t], [24.75, t]]) plant(x + (er() - 0.5) * 0.5, z + (er() - 0.5) * 0.3, mixKind()); // inside the wall
   for (let t = -5; t < 30; t += 4.2) for (const [x, z] of [[t, -5.6], [t, 29.4], [-5.6, t], [29.4, t]]) plant(x, z, (Math.round(t / 4.2) % 2) ? 'tall' : 'round');      // avenue along the road
-  for (const [x, z, w, d] of STREETS) { const v = d > w; for (let t = 2; t < (v ? d : w); t += 5.5) for (const side of [-1.5, d > w ? 3.1 : 3.1]) plant(v ? x + side : x + t, v ? z + t : z + side, er() < 0.7 ? 'round' : 'tall'); } // street trees
-  for (const [px, pz] of PARKS) for (let i = 0; i < 6; i++) { const a = er() * 6.28, r = 0.6 + er() * 1.6; plant(px + Math.cos(a) * r, pz + Math.sin(a) * r, mixKind()); } // neighbourhood parks
   for (const [x, z] of [[-0.75, 2.45], [-0.75, 4.95], [-6.4, 2.45], [-6.4, 4.95]]) trees.push([x, z, 'palm', 1, er() * 6.28]); // palms at the entrance
 
   const leafMat = new THREE.MeshStandardMaterial({ color: '#FFFFFF', roughness: 0.9, flatShading: true });

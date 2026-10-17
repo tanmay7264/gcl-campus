@@ -62,3 +62,17 @@ export const PEOPLE = {
     cta: 'insights',
   },
 };
+
+// Why a company should bring us a challenge: shown in the "Why partner" panel (#why).
+export const WHY = {
+  lead: 'One challenge statement from you becomes two trimesters of focused work by a diverse Post Graduate management team, guided by WeSchool faculty and by you.',
+  benefits: [
+    ['lightbulb', '#E8892B', 'Fresh, outside-in thinking', 'Mixed teams (gender, education, work experience) look at your problem without internal bias or legacy assumptions.'],
+    ['travel_explore', '#3FA796', 'Research you would otherwise commission', 'Stakeholder maps, customer journeys and primary-research insights, the groundwork of a consulting engagement.'],
+    ['view_in_ar', '#66518A', 'A working prototype, not just a report', 'Teams build with new-age tech (apps, dashboards, AI tools) so you can see and test the idea.'],
+    ['trending_up', '#7AA342', 'A commercially feasible solution', 'Every idea is pressure-tested for viability, cost and rollout before it is presented to you.'],
+    ['badge', '#4F86C6', 'An early look at future hires', 'Watch students handle a real brief over months. Spot the leaders before campus placements.'],
+    ['public', '#B98A55', 'Impact and employer brand', 'Social and SDG challenges are welcome. Your brand reaches the next generation of managers.'],
+  ],
+  effort: [['Your time', 'About 4 touchpoints over two trimesters, online or in person'], ['You share', 'One challenge statement, plus any data you are happy to share'], ['Optional', 'Be the team’s Industry Mentor for deeper involvement']],
+};
