@@ -357,7 +357,8 @@ GCL/
   - **Challenge drawer:** stage stepper and actions, contact, ownership and mentors, next touchpoint (shared), email composer (template, edit, send), tracking link, notes with "Share with company", full timeline.
 - **Emails (MailApp, from the owner's Gmail):** acknowledgement plus admin alert on submission; stage templates in `apps-script/Emails.gs`; weekly digest (Sheet menu → Install weekly digest, Mondays 9am). Shared log entries never contain email addresses or phone numbers.
 - **Tracker shows only:** organisation, type, the first 400 characters of the challenge, stage and stage dates, next touchpoint, student team and industry mentor, shared updates.
-- **Sheet menu "GCL CRM":** set up (creates tabs, migrates the old one-tab form sheet), add or reset a user, install weekly digest, show links, remove test challenges.
+- **Sheet menu "GCL CRM":** set up (creates tabs, migrates the old one-tab form sheet), add or reset a user, install weekly digest, show links, remove test challenges, **load / remove demo data**.
+- **Demo data** (`apps-script/Demo.gs`, also on the Team page for Admins): 38 sample challenges `DEMO-01…38` with history, touchpoints and three demo teammates (no password, cannot sign in). Tagged `demo`, labelled "Demo" in the UI, contacts use reserved `.example` emails, and any email to them is skipped (logged as not sent). Removing deletes only demo challenges, their activity and demo teammates. The local dev server seeds the same data.
 
 ## 9. Accessibility & performance notes
 
