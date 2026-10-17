@@ -31,7 +31,7 @@ const HAIR = ['#2E2633', '#4A3426', '#1F1B2D', '#6B4A2E'];
 const STUDENT_SHIRTS = ['#3FA796', '#5BB4D9', '#F2C14E', '#8DBA4E', '#E57A7A', '#5E8DD0'];
 const ROLE_COLOUR = { students: '#3FA796', faculty: '#66518A', companies: '#E8892B' };
 
-export function createScene(canvas, labelsEl, { onSelect, onStory, reduceMotion }) {
+export function createScene(canvas, labelsEl, { onSelect, onStory, onCamera, reduceMotion }) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true }); // throws without WebGL
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.setClearColor(0x000000, 0);                                   // the sky gradient is CSS behind the canvas
@@ -735,7 +735,9 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, reduceMotion 
     return false;
   }
 
-  let beat = 0, loopN = 0, phase = 'walk', dwell = 0, subStep = -1, mentor = mentors[0], follow = false;
+  let beat = 0, loopN = 0, phase = 'walk', dwell = 0, subStep = -1, mentor = mentors[0];
+  let follow = false, autoCam = true; // follow = camera is following the live group now; autoCam = the visitor's auto-camera preference
+  const setFollow = on => { if (follow !== on) { follow = on; onCamera?.(on); } };
   const leaving = []; // people walking off stage; hidden when they get there
   const HANDOVER = 7;  // seconds between one project's Demo Day and the next company's arrival
   let handoverAge = 0;
@@ -818,7 +820,7 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, reduceMotion 
   const clearOutline = () => { if (outline) { outline.parent.remove(outline); outline.geometry.dispose(); outline = null; } };
 
   function select(id, { fly = true } = {}) {
-    selected = id; clearOutline(); follow = false;
+    selected = id; clearOutline(); setFollow(false);
     glowRole = roleMats[id] ? id : null;
     for (const set of Object.values(roleMats)) for (const m of set) m.emissive.set('#000000');
     const o = objects[id], tm = teams[id];
@@ -848,7 +850,9 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, reduceMotion 
     return to;
   }
   const flyTo = (target, zoom) => tween(framed(target, zoom), zoom);
-  canvas.addEventListener('pointerdown', () => { anim = null; follow = false; }); // the visitor takes the camera
+  canvas.addEventListener('pointerdown', () => { anim = null; });
+  const pauseAuto = () => { autoCam = false; setFollow(false); }; // the visitor takes the camera
+  canvas.addEventListener('wheel', () => { if (follow) pauseAuto(); }, { passive: true });
 
   // Picking + hover
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
@@ -864,6 +868,7 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, reduceMotion 
     if (down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) < 5) { const id = pickAt(e); if (id) onSelect(id); }
     down = null;
   });
+  canvas.addEventListener('pointermove', e => { if (e.buttons && down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5 && follow) pauseAuto(); });
   canvas.addEventListener('pointermove', e => {
     if (e.buttons) return;
     const id = pickAt(e);
@@ -983,8 +988,13 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, reduceMotion 
       const i = TEAMS.findIndex(t => t[0] === id);
       if (i < 0) return;
       if (restart || project() !== id) { if (nextCrew) { crew = nextCrew; nextCrew = null; } loopN = i; startBeat(0); crew.forEach(a => stepActor(a, 1e3)); } // fresh start: crew takes its places, the new company walks in
-      follow = true;
+      setFollow(autoCam); // respect a paused auto-camera: fly there once, don't keep following
       tween(framed(groupCentre(), Math.max(camera.zoom, 1.6)), Math.max(camera.zoom, 1.6));
+    },
+    // Auto-camera toggle: follow the live group (and dive into buildings) or leave the camera to the visitor.
+    setAutoCamera(on) {
+      autoCam = on; setFollow(on);
+      if (on) tween(framed(groupCentre(), Math.max(camera.zoom, 1.6)), Math.max(camera.zoom, 1.6));
     },
     zoom: f => tween(controls.target.clone(), THREE.MathUtils.clamp(camera.zoom * f, controls.minZoom, controls.maxZoom)),
     spin: deg => tween(controls.target.clone(), camera.zoom, offset().applyAxisAngle(new THREE.Vector3(0, 1, 0), THREE.MathUtils.degToRad(deg))),

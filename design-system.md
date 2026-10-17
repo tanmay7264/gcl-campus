@@ -261,7 +261,7 @@ Native `<dialog>`, centred, max 900px wide by 92vh, radius `--r`, scrollable, st
 - **Orthographic isometric** camera: offset about `(60, 52, 60)`, tilt locked, spin allowed (90° rotate button), zoom about 0.7–3.6, pan clamped to the world bounds.
 - **Controls:** drag to pan, scroll or pinch to zoom, right-drag (two-finger on touch) to rotate. Any drag cancels camera tweens and follow mode.
 - **Fly-to on selection:** 0.9s tween to a framed target (§3.1) at a sensible zoom (places 1.5, groups 1.6–2.4).
-- **Follow mode** for live content: the camera glides after the moving group (target lerp about `dt × 1.6`) until the visitor grabs the map.
+- **Follow mode** for live content: the camera glides after the moving group (target lerp about `dt × 1.6`). Always give an explicit **auto-camera toggle** (Pause / Resume, in a panel that is visible on phones too). Treat a drag or a scroll-zoom while following as "pause", keep the visitor's choice when they pick something new, and never pause on a plain click.
 
 ### 5.2 World palette, light & atmosphere
 - Matte standard materials (roughness ≈ 0.85–1), no metalness except water; flat shading on foliage.

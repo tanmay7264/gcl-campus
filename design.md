@@ -200,7 +200,10 @@ Native `<dialog>` showing the full student poster image (`assets/poster-*.jpg`),
 - **Orthographic isometric camera:** offset `(60, 52, 60)`, frustum half-height 15 (widened on portrait screens), tilt locked, spin allowed.
 - **Zoom** 0.7–3.6, default 0.84. Pan is clamped to ±13 units. The default look-at is nudged (`HOME`) so the Industry Gate clears the KPI cards.
 - **Camera tweens:** 0.9s cubic ease-out. Dragging cancels a tween and stops the follow mode.
-- **Follow mode** (while watching a project): the camera glides after the live group. Grabbing the map hands control back to the visitor.
+- **Follow mode / auto-camera** (while watching a project): the camera glides after the live group and dives into buildings. An **auto-camera toggle** in the tracker header (desktop and phone) controls it:
+  - **"⏸ Pause auto-camera"** stops following and zooming;
+  - **"▶ Resume auto-camera"** glides back to the live group and keeps following.
+  Dragging the map or scroll-zooming while it follows also pauses it, and the button updates. A plain click doesn't. Pausing is remembered: picking another project flies the camera there once but doesn't follow until resumed. Scene API: `setAutoCamera(on)`; callback `onCamera(on)`.
 - No WebGL or no CDN: the page keeps working (lists, tracker, inspector), shows a note, and adds `body.no-webgl`.
 
 ### 5.2 Campus layout (grid units 0–24, centred at the origin)
@@ -327,7 +330,7 @@ GCL/
 - **No build step:** static files, Three.js from jsDelivr.
 - **Local preview:** `python3 -m http.server 8765 --directory GCL`, then open `/site/` (configured in `.claude/launch.json`).
 - **Deploy:** commit, `git push campus main`; GitHub Pages publishes the repo root in about a minute. The local `main` tracks `campus/main`. The old `weschool-gcl` repo (remote `origin`) is the old site and must not be pushed to.
-- **Cache busting:** every asset URL carries `?v=N` (currently **16**) in `site/index.html` (CSS and main.js) and `site/main.js` (projects, data, scene imports). **Bump N on every deploy**, or returning visitors may mix old and new files.
+- **Cache busting:** every asset URL carries `?v=N` (currently **17**) in `site/index.html` (CSS and main.js) and `site/main.js` (projects, data, scene imports). **Bump N on every deploy**, or returning visitors may mix old and new files.
 - **Connect the form:** deploy `apps-script/Code.gs` as a Google Apps Script Web App (Execute as me, access Anyone) and paste its `/exec` URL into `SCRIPT_URL` at the top of `site/main.js`.
 - **Add a partner project:**
   1. Add an entry to `projects.js` and a poster to `assets/`.

@@ -1,6 +1,6 @@
 // Bump ?v= on every deploy (here and in index.html) so browsers never mix old and new files.
-import { PROJECTS } from './projects.js?v=16';
-import { STAGES, ROLE, PEOPLE } from './data.js?v=16';
+import { PROJECTS } from './projects.js?v=17';
+import { STAGES, ROLE, PEOPLE } from './data.js?v=17';
 
 // Google Apps Script Web App URL (see ../apps-script/Code.gs). Empty = form shows "not connected".
 const SCRIPT_URL = '';
@@ -17,7 +17,8 @@ let map = null;          // 3D scene API (null without WebGL)
 let current = null;      // selected id: stage, project (= its student team), people group, or "rep:<project>" (company mentor)
 let tab = 'projects';
 const insp = document.getElementById('inspector');
-let story = null;        // { stage, project } of the live project walking the campus
+let story = null;
+let cameraOn = false;     // is the auto-camera following the live group?        // { stage, project } of the live project walking the campus
 
 /* ---------- Selection ---------- */
 function select(id, { fly = true } = {}) {
@@ -148,6 +149,15 @@ function renderTracker() {
     <span><b>#GCL-${p.id.toUpperCase()}</b><small>${p.org}</small><span class="chip green">${current && S[current] ? 'Example for this stage' : 'Completed project'}</span></span>${ms('chevron_right')}</button>`;
 }
 
+/* Auto-camera toggle (lives in the tracker header so phones have it too) */
+function renderCamToggle() {
+  const b = $('#camToggle');
+  b.innerHTML = cameraOn ? `${ms('pause')}<span>Pause auto-camera</span>` : `${ms('videocam')}<span>Resume auto-camera</span>`;
+  b.classList.toggle('on', cameraOn); b.setAttribute('aria-pressed', cameraOn);
+  b.title = cameraOn ? 'The camera follows the live team and zooms into buildings. Click to stop and look around freely.' : 'Follow the live team automatically, zooming into each building.';
+}
+renderCamToggle();
+
 /* ---------- List tabs + search ---------- */
 const rowStage = s => `<li><button data-select="${s.id}" class="${current === s.id ? 'on' : ''}"><span class="tile" style="background:${s.id === 'challenge' ? '#F0973A' : '#7AA342'}">${s.num}</span><span><b>${s.title}</b><small>${s.building} · ${s.term}</small></span><span class="chip">${s.role ? '★ You' : 'Students'}</span></button></li>`;
 const rowProject = p => { const f = story?.project === p.id && story.phase !== 'done', nx = story?.phase === 'done' && story.next === p.id; return `<li><button data-select="${p.id}" class="${current === p.id ? 'on' : ''} ${f ? 'featured' : ''}"><span class="tile" style="background:${PCOLOR[p.id]}">${p.org[0]}</span><span><b>${p.org}</b><small>${f ? 'Live now · ' + S[story.stage].short : nx ? 'Starting next' : p.title}</small></span><span class="chip ${f ? 'orange' : nx ? 'green' : 'watchable'}">${f ? '● Live' : nx ? 'Up next' : `<span class="dom">${p.domain.split(' · ')[0]}</span><span class="watch">▶ Watch live</span>`}</span></button></li>`; };
@@ -183,6 +193,7 @@ document.addEventListener('click', e => {
     zoomin: () => map?.zoom(1.35), zoomout: () => map?.zoom(1 / 1.35),
     spin: () => map?.spin(90), home: () => { map?.home(); },
     sheet: () => insp.classList.toggle('peek'),
+    camera: () => map?.setAutoCamera(!cameraOn),
     watchlive: () => select(story?.project || PROJECTS[0].id),
     replay: () => { map?.watch(current, true); renderInspector(); },
   })[t.dataset.action]?.();
@@ -218,9 +229,10 @@ addEventListener('hashchange', () => select(location.hash.slice(1) || null));
 const initial = location.hash.slice(1) || null;
 select(initial, { fly: false });
 
-import('./scene.js?v=16').then(({ createScene }) => {
+import('./scene.js?v=17').then(({ createScene }) => {
   map = createScene($('#scene'), $('#labels'), {
     onSelect: id => select(id), reduceMotion,
+    onCamera: on => { cameraOn = on; renderCamToggle(); },
     onStory: ev => {
       const prev = story?.project, changed = ev.project !== prev;
       story = ev;

@@ -157,6 +157,14 @@ kbd { font: 600 11px Inter; border: 1px solid var(--line); border-radius: 5px; p
 .ccard > span:nth-child(2) { flex: 1; display: flex; flex-direction: column; gap: 2px; align-items: flex-start; } .ccard b { font-size: 12px; }
 .ccard:hover { background: var(--purple-l); }
 .ccard > .ms { color: var(--faint); }
+/* Auto-camera toggle */
+.camtoggle { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px 5px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 600; background: var(--purple-l); color: var(--purple); white-space: nowrap; }
+.camtoggle .ms { font-size: 16px; }
+.camtoggle.on { background: var(--purple); color: #fff; }
+.camtoggle:hover { filter: brightness(.96); }
+.steps-wrap h2 { align-items: center; }
+#trackSub { min-width: 0; overflow: hidden; flex: 1 1 auto; } .steps-wrap h2 .t, .featured, .camtoggle { white-space: nowrap; flex: none; } #trackSub .muted { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } /* long titles shorten, the camera button stays on the row */
+
 /* Live narrator */
 .steps-wrap h2 small { display: inline-flex; align-items: center; gap: 8px; }
 .featured { display: inline-flex; align-items: center; gap: 6px; background: var(--orange-l); color: #9A5413; font-weight: 700; font-size: 12px; padding: 3px 10px 3px 3px; border-radius: 999px; box-shadow: 0 0 0 1.5px #F0973A inset; }
@@ -263,6 +271,7 @@ label.check input { width: 17px; height: 17px; margin: 0; accent-color: var(--pu
   .tracker { top: 62px; bottom: auto; left: 10px; right: 10px; max-width: none; padding: 10px 10px 8px; flex-direction: column; align-items: stretch; gap: 8px; }
   .steps-wrap h2 { font-size: 12px; margin-bottom: 8px; }
   .steps-wrap h2 .t, #trackSub .muted { display: none; }
+  .steps-wrap h2 { display: flex; } .camtoggle { padding: 4px 9px 4px 7px; font-size: 10.5px; } .camtoggle span:not(.ms) { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
   .steps li { width: auto; flex: 1; min-width: 0; }
   .steps li:not(:last-child)::after { top: 12px; left: calc(50% + 15px); width: calc(100% - 30px); }
   .steps .dot { width: 24px; height: 24px; font-size: 10.5px; }
