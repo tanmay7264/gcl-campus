@@ -1,6 +1,6 @@
 // Bump ?v= on every deploy (here and in index.html) so browsers never mix old and new files.
-import { PROJECTS } from './projects.js?v=13';
-import { STAGES, ROLE, PEOPLE } from './data.js?v=13';
+import { PROJECTS } from './projects.js?v=14';
+import { STAGES, ROLE, PEOPLE } from './data.js?v=14';
 
 // Google Apps Script Web App URL (see ../apps-script/Code.gs). Empty = form shows "not connected".
 const SCRIPT_URL = '';
@@ -52,9 +52,10 @@ function renderInspector() {
         <li><i class="dot" style="background:#E8892B"></i><span><b>Company mentors</b> walk in with an orange problem card and leave with a green solution</span></li>
         <li><i class="dot" style="background:#3FA796"></i><span><b>Student teams</b> work on live projects at the tables under the idea bulbs</span></li>
         <li><i class="dot" style="background:#66518A"></i><span><b>Faculty mentors</b> guide every team, start to finish</span></li>
+        <li>${ms('meeting_room')}<span>Buildings <b>open up</b> when the team works inside: watch each step happen</span></li>
         <li>${ms('ads_click')}<span>Click any building, team or person · drag to pan · scroll to zoom</span></li>
       </ul>
-      <div class="actions"><button class="btn primary" data-select="challenge">${ms('play_arrow')}Start the tour</button><button class="btn soft" data-action="form">Submit a Challenge</button></div>`;
+      <div class="actions"><button class="btn primary" data-action="watchlive">${ms('play_arrow')}Watch it live</button><button class="btn soft" data-select="challenge">Start the tour</button></div>`;
     return;
   }
   const g = PEOPLE[current];
@@ -132,13 +133,13 @@ function renderTracker() {
     $('#trackSub').innerHTML = `<span class="featured"><span class="tile" style="background:${PCOLOR[p.id]}">${p.org[0]}</span>${p.org}</span><span class="muted">${p.title} · now featured</span>`;
     $('#current').innerHTML = `
       <div class="now ${walking ? 'walk' : 'work'}">
-        <div class="now-head"><span class="live-dot"></span><b>${walking ? 'On the way to ' + s.building : 'Happening now · ' + s.building}</b><span class="step">Step ${s.i + 1} of ${STAGES.length}</span></div>
-        <p>${s.plain}</p>
+        <div class="now-head"><span class="live-dot"></span><b>${walking ? 'On the way to ' + s.building : 'Inside the ' + s.building}</b><span class="step">Step ${s.i + 1} of ${STAGES.length}</span></div>
+        ${walking ? `<p>${s.plain}</p>` : `<ol class="substeps">${s.inside.map((x, i) => `<li class="${i < story.sub ? 'done' : i === story.sub ? 'on' : ''}"><i>${i < story.sub ? '✓' : i + 1}</i>${x}</li>`).join('')}</ol>`}
         <div class="now-foot">
           <span class="who">${s.who.map(w => `<span><i style="background:${WHO[w][1]}"></i>${WHO[w][0]}</span>`).join('')}</span>
           <span class="you ${s.you ? '' : 'none'}">${s.you ? '★ Company: ' + s.you : 'Students lead this step'}</span>
         </div>
-        <div class="timebar"><i style="animation-duration:${walking ? 1.2 : story.duration}s"></i></div>
+        <div class="timebar"><i style="animation-duration:${walking ? 1.2 : story.duration}s;animation-delay:${walking ? 0 : -(story.sub || 0) * story.duration / 3}s"></i></div>
       </div>`;
     return;
   }
@@ -182,6 +183,7 @@ document.addEventListener('click', e => {
     zoomin: () => map?.zoom(1.35), zoomout: () => map?.zoom(1 / 1.35),
     spin: () => map?.spin(90), home: () => { map?.home(); },
     sheet: () => insp.classList.toggle('peek'),
+    watchlive: () => select(story?.project || PROJECTS[0].id),
     replay: () => { map?.watch(current, true); renderInspector(); },
   })[t.dataset.action]?.();
 });
@@ -216,7 +218,7 @@ addEventListener('hashchange', () => select(location.hash.slice(1) || null));
 const initial = location.hash.slice(1) || null;
 select(initial, { fly: false });
 
-import('./scene.js?v=13').then(({ createScene }) => {
+import('./scene.js?v=14').then(({ createScene }) => {
   map = createScene($('#scene'), $('#labels'), {
     onSelect: id => select(id), reduceMotion,
     onStory: ev => {
@@ -225,7 +227,7 @@ import('./scene.js?v=13').then(({ createScene }) => {
       const s = S[ev.stage], p = P[ev.project];
       map.storyEl.innerHTML = ev.phase === 'done'
         ? `<span class="live-dot ok"></span><span><b>${p.org} ✓ Solution delivered</b><small>Up next: ${P[ev.next].org}</small></span>`
-        : `<span class="live-dot"></span><span><b>${p.org}</b><small>${ev.phase === 'walk' ? 'Walking to ' + s.building : s.short + ' · ' + s.building}</small></span>`;
+        : `<span class="live-dot"></span><span><b>${p.org} · ${ev.phase === 'walk' ? 'Walking to ' + s.building : 'Inside ' + s.building}</b><small>${ev.phase === 'walk' ? s.short + ' is next' : (ev.sub + 1) + '/3 · ' + s.inside[ev.sub]}</small></span>`;
       if (changed && prev && current === prev) select(ev.project, { fly: false }); // a watched feed rolls on to the next company
       document.querySelectorAll('.maplabel[data-id]').forEach(l => l.classList.toggle('featured', l.dataset.id === ev.project));
       if (!current || P[current]) renderTracker();

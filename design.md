@@ -139,7 +139,7 @@ Three chips: **Companies** (orange), **Students** (teal), **Faculty** (purple). 
 
 | State | Header (tile · kicker · title · sub) | Body |
 |---|---|---|
-| **Welcome** (nothing selected) | school icon · `WELCOME · GCL 2026-27` · "Welcome to the GCL Campus" | Pitch paragraph, CCL/DI line, a role legend in a how-to box, **Start the tour** / Submit a Challenge |
+| **Welcome** (nothing selected) | school icon · `WELCOME · GCL 2026-27` · "Welcome to the GCL Campus" | Pitch paragraph, CCL/DI line, a how-to box (role legend + "buildings open up"), **▶ Watch it live** / Start the tour |
 | **Stage** | stage number (★ orange for Challenge) · `STAGE n · TRIMESTER …` · stage title · building | Touchpoint chip + "Step n of 6", progress bar, 4 detail rows, **Your role** box (if a company touchpoint), evidence (IDFC % bars at Insights, otherwise past-project bullets), project card, **View … project** / **Next stage →** |
 | **Project** | company initial · `PARTNER PROJECT · DOMAIN` · title · company | Status chip (**● Live feed playing** / **✓ Project complete · Up next** / **Live project · completed**), poster thumbnail, Challenge / Stakeholders / Insight / Prototype / Solution, team & mentors, **Replay from start** / View poster |
 | **People** (Companies / Students / Faculty) | role icon in role colour · role kicker · title | Lead sentence, 4 rows, first 3 project cards, a role-specific CTA, How it works |
@@ -157,7 +157,7 @@ The left side holds the title, the featured company pill and a 6-step stepper. T
 | Phase | Steps | Panel |
 |---|---|---|
 | **walk** | Active dot turns orange with a walking icon; the previous connector "marches" | "On the way to *Building*", Step n of 6, the plain sentence, who's involved, ★ Company role, indeterminate sliding bar |
-| **work** | Active dot purple, "Happening now" | "Happening now · *Building*", same body, bar fills over the stage time |
+| **work** | Active dot purple, "Happening now" | "Inside the *Building*" + a **3-item sub-step checklist** (done ✓ green · current orange, pulsing · upcoming grey), who's involved, ★ role, bar fills over the stage time (phones show only the current sub-step) |
 | **done** | All 6 ✓ "Done"; company pill turns green with a ✓ | Green panel: 🎉 "Project complete · *Company*", "6 of 6 ✓", the next-company line, **UP NEXT** tile + company · project title, green countdown bar |
 
 When something else is selected, the tracker shows "You are here" on that stage and a project card on the right (*Example for this stage* / *Completed project*).
@@ -207,12 +207,12 @@ Native `<dialog>` showing the full student poster image (`assets/poster-*.jpg`),
 
 | Building (stage) | Grid x, z | Size w×d×h | Roof | Style |
 |---|---|---|---|---|
-| Industry Gate (Challenge) | −1, −1 | 2.6×2.4×1.3 | `#F0973A` | hip roof, plus an orange arch over the entry path |
-| Stakeholder Studio | 7, −0.6 | 3×2.4×1.6 | `#8DBA4E` | hip |
-| Design Lab (Journey) | 13, −0.6 | 3×2.4×1.5 | `#8DBA4E` | hip |
-| Research Library (Insights) | 21.9, 6 | 2.6×3.4×2.0 | `#8DBA4E` | flat, with columns |
-| Innovation Lab (Prototype) | 21.9, 12.5 | 2.6×3.2×1.7 | `#8DBA4E` | flat |
-| Demo Day Auditorium (Solution) | 12.5, 21.9 | 4.2×2.8×2.2 | `#7B63A6` | hall, with a canopy and a presentation screen beside it |
+| Industry Gate (Challenge) | −1.6, −1.6 | 3.6×3.2×1.5 | `#F0973A` | hip roof, plus an orange arch over the entry path |
+| Stakeholder Studio | 6.4, −1.6 | 4.2×3.4×1.7 | `#8DBA4E` | hip |
+| Design Lab (Journey) | 12.4, −1.6 | 4.2×3.4×1.6 | `#8DBA4E` | hip |
+| Research Library (Insights) | 21.7, 5.6 | 3.6×4.2×2.0 | `#8DBA4E` | flat, with columns |
+| Innovation Lab (Prototype) | 21.7, 12.2 | 3.6×4.0×1.8 | `#8DBA4E` | flat |
+| Demo Day Auditorium (Solution) | 11.8, 21.8 | 5.6×3.6×2.3 | `#7B63A6` | hall, with a canopy over the door; stage, screen and audience inside |
 | WeSchool Main Block | 4.6, 21.9 | 4.4×2.6×2.4 | `#66518A` | hip, with clock tower and waving flag |
 
 **Grounds:** a path loop (3→21), cross paths, four quad lawns, a plaza with fountain (pulsing spout), and an entry spur through the gate. Kaleidosync's silk-farm field sits outside the west path. Trees, lamp posts and benches are **instanced**, and building windows are a single instanced mesh. Every building has a door facing the quad.
@@ -235,21 +235,41 @@ Jointed low-poly figures, about 1.07 units tall, facing local +x. Each has two-s
 **Static scene:** seated students and a standing faculty mentor at each team table, and students chatting on benches. Nobody wanders; the only walking is the live story.
 
 ### 5.4 Live story choreography
-Cast: one company mentor, one faculty mentor and three students. Two of each crew alternate, so the next one can get ready while the last one leaves. Walking speed is 1.6 units/s along the paths, taking the shorter way round the loop. Groups gather on the **camera-facing side** of each building.
+Cast: one company mentor, one faculty mentor and three students. Two crews alternate, so the next one is already waiting inside the Gate and the Studio while the last one leaves. Walking speed is 1.6 units/s.
 
-| Beat | Where | Who / poses | Time at stage |
+**Routing:** out through the current building's door, along the path loop (the shorter way round), and in through the next door to a spot **inside** the room. Door points are in `LOC`; inside spots are offsets from each building's centre.
+
+| Beat | Inside | What the cast does | Time |
 |---|---|---|---|
-| 0 Challenge | Inside the Industry Gate arch | Mentor arrives and talks to the faculty mentor; students wait at the studio | 8s |
-| 1 Stakeholders | In front of Stakeholder Studio | Everyone talks and listens | 8s |
-| 2 Journey | In front of Design Lab | Students lead; the mentor stands back | 8s |
-| 3 Insights | South side of Research Library | Students present to the mentor | 8s |
-| 4 Prototype | South side of Innovation Lab | The mentor tries the prototype and talks | 8s |
-| 5 Solution | Demo Day screen | Students present; mentor and faculty watch; card turns green with 4s left | 9s |
-| Handover | Demo Day → Main Block, Gate → home | Finished team walks to the Main Block, the mentor leaves with the green card, and a fresh team steps out of the Gate and Studio | 7s |
+| 0 Challenge | Industry Gate | The mentor walks in from the gate and talks; the faculty mentor listens, then scopes the problem. Students wait in the studio | 12s |
+| 1 Stakeholders | Stakeholder Studio | Students work at the whiteboard; the mentor speaks at sub-step 3 | 12s |
+| 2 Journey | Design Lab | Students lead at the journey wall; the mentor stands back | 12s |
+| 3 Insights | Research Library | Students present at the idea table; the mentor picks one (sub-step 3) | 12s |
+| 4 Prototype | Innovation Lab | Students at the workbench; the mentor tests the prototype (sub-step 3) | 12s |
+| 5 Solution | Demo Day Auditorium | Students present on stage; mentor and faculty sit in the front row; the card turns green at sub-step 3 | 12s |
+| Handover | Auditorium → Main Block, Gate → home | The finished team walks to the Main Block, the mentor leaves with the green card, and the next crew is already inside the Gate and Studio | 7s |
 
-Then the next company (in project order) walks in. A full cycle takes about 80s. Each beat sends `onStory({ stage, project, phase: 'walk' | 'work' | 'done', duration, next })` to the UI.
+A full cycle takes about 110s. Events sent to the UI: `onStory({ stage, project, phase: 'walk' })`, then `{ phase: 'work', sub: 0|1|2, duration: 12 }` at each sub-step, then `{ phase: 'done', next, duration: 7 }`.
 
-**Watching a project** (`map.watch(id, restart)`): the story restarts with that company, the crew takes its starting places, the new mentor walks in (first beat about 4s later), and the camera follows. A watched feed **rolls on to the next company automatically** after its handover. The story pauses while the browser tab is hidden.
+**Watching a project** (`map.watch(id, restart)`): the story restarts with that company, the crew takes its starting places, the new mentor walks in (first sub-step about 4s later), and the camera follows. While following, the camera **dives in (zoom 2.8) while the team works inside** and pulls back to 1.7 while it walks. A watched feed rolls on to the next company automatically. The story pauses while the browser tab is hidden.
+
+### 5.5 Building interiors (open-up view)
+Each stage building has two layers:
+- an **outer shell** (body, windows, door, roof and details; its own fading materials);
+- an **interior**: floor, two full-height back walls with brand trim (the sides away from the camera), two low front walls with a door gap, and stage props.
+
+**Opening:** a building opens while the team works inside it (and during the first 3s of the handover for the auditorium) or when it is selected. It closes otherwise. The animation eases in over about a second: the roof lifts 1.6 units, the shell fades out, the interior walls rise from the floor, and props appear once the walls are about a third up. The building's map label rises with the roof. People walking in disappear behind the closed walls and are revealed when the room opens.
+
+**Sub-steps:** `fx(p, t)` runs each room's animation from `p = 0` to `1` across the 12s (three 4s sub-steps). A room opened by a click shows its finished state.
+
+| Building | Props | Sub-step 1 | Sub-step 2 | Sub-step 3 |
+|---|---|---|---|---|
+| Industry Gate | Orange reception desk, plant, challenge board | Company explains its problem | Brief lines write themselves on the board | Orange challenge card pinned and glowing |
+| Stakeholder Studio | Whiteboard, meeting table + stools | 8 stakeholder stickies appear around the problem card | Connector lines draw to each sticky | 3 stickies grow (prioritised), problem card pulses |
+| Design Lab | Persona board (side wall), journey wall | Persona appears | 5 journey steps + emotion curve draw in | 2 pain points turn red and pulse |
+| Research Library | 2 bookshelves, survey chart, idea table | Survey bars grow | 3 idea cards rise on the table | The chosen card lifts, turns green and glows; others grey out |
+| Innovation Lab | Big screen, workbench + 3 laptops, prototype stand, 3D printer | Wireframe sketch on screen | Colour UI builds up, laptops glow, the phone prototype appears | Feedback stars pop above the phone |
+| Demo Day Auditorium | Stage, big screen, 12 seats with a 5-person audience | Title slide | Business-case bar chart grows | Green tick on screen + confetti |
 
 ---
 
@@ -293,7 +313,7 @@ GCL/
 - **No build step:** static files, Three.js from jsDelivr.
 - **Local preview:** `python3 -m http.server 8765 --directory GCL`, then open `/site/` (configured in `.claude/launch.json`).
 - **Deploy:** commit, `git push campus main`; GitHub Pages publishes the repo root in about a minute. The local `main` tracks `campus/main`. The old `weschool-gcl` repo (remote `origin`) is the old site and must not be pushed to.
-- **Cache busting:** every asset URL carries `?v=N` (currently **13**) in `site/index.html` (CSS and main.js) and `site/main.js` (projects, data, scene imports). **Bump N on every deploy**, or returning visitors may mix old and new files.
+- **Cache busting:** every asset URL carries `?v=N` (currently **14**) in `site/index.html` (CSS and main.js) and `site/main.js` (projects, data, scene imports). **Bump N on every deploy**, or returning visitors may mix old and new files.
 - **Connect the form:** deploy `apps-script/Code.gs` as a Google Apps Script Web App (Execute as me, access Anyone) and paste its `/exec` URL into `SCRIPT_URL` at the top of `site/main.js`.
 - **Add a partner project:**
   1. Add an entry to `projects.js` and a poster to `assets/`.

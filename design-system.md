@@ -230,7 +230,7 @@ Close returns to Welcome. On phones the panel becomes the bottom sheet (§3.3).
 | Phase | Panel |
 |---|---|
 | moving | Accent tint and border · live dot + "On the way to *Place*" + step pill · one plain sentence · who's involved (category dots) · ★ visitor role (or "X lead this step") · indeterminate sliding bar |
-| working | Same, with heading "Happening now · *Place*" and a bar that fills over the phase duration |
+| working | Heading "Inside the *Place*" + a **3-item sub-step checklist** (done ✓ success · current accent, pulsing · upcoming faint); a bar fills over the phase duration. Phones show only the current sub-step |
 | done | Success tint and border · 🎉 "Complete · *Item*" + "n of n ✓" · one sentence · **UP NEXT** row (tile + name · subtitle) · success countdown bar |
 
 The title row carries a **featured pill** (tile + name, accent; success with a ✓ when done).
@@ -304,6 +304,16 @@ Native `<dialog>`, centred, max 900px wide by 92vh, radius `--r`, scrollable, st
 
 ---
 
+### 5.6 Open-up interiors (signature pattern)
+Places where work happens can open up so visitors see inside.
+
+- **Two layers per building:** an outer **shell** (body, windows, door, roof; each building has its own fading materials and an instanced window mesh) and an **interior** (floor, two full back walls on the sides away from the camera, two low front walls with a door gap, props).
+- **Open:** lerp `open` from 0 to 1 at about `dt × 2.5`. The roof lifts by about 1.6 units, the shell fades out (stop writing depth after the halfway point), interior walls scale up from the floor, props appear once the walls are about a third up, and the place label rises with the roof. **Close** by reversing the same steps.
+- **When:** while the narrated group works inside, or while the place is selected. Close everything else.
+- **Show the process, not decoration:** each room has 3–4 big readable props on its back walls or a central table, animated through the **3 sub-steps** with a function `fx(p, t)`, where p goes 0→1. Prefer appear/grow (sticky notes popping in, bars growing, lines drawing) and one **decision moment** (an item turns success-coloured and glows). Selecting a room when no story is inside shows its finished state.
+- **Camera:** while following, zoom about 2.8 while the group works inside and about 1.7 while it walks.
+- **Size rooms for people:** at least 3.5 × 3 units for 5 characters plus props. Keep standing spots clear of furniture.
+
 ## 6. Interaction patterns
 
 ### 6.1 Selection
@@ -315,8 +325,9 @@ One global `select(id)` drives everything: 3D highlight, camera fly-to, inspecto
 ### 6.3 Live narrated story (signature pattern)
 A scripted, looping story walks a group through the process so visitors *see* it happen.
 
-- **Beats:** each beat has a place, positions for each actor, poses, and a dwell time (about 8s; the final one about 9s).
-- **Phases** sent to the UI: `walk` → `work (duration)` → … → `done (next, duration)`.
+- **Beats:** each beat has a place, positions for each actor (inside the building), poses, and a dwell time split into **3 equal sub-steps** (about 12s total).
+- **Phases** sent to the UI: `walk` → `work (sub 0, 1, 2; duration)` → … → `done (next, duration)`.
+- **Routing:** actors leave by the current door, follow the path network and enter by the next door. Never cut through walls.
 - **Handover between items:** a celebration phase, then the finished group leaves while a **second pre-staged group** steps out, so the next item starts within seconds (no long walks).
 - **Watch:** picking an item restarts the story with it, snaps the crew to its start positions, turns on follow mode, and **rolls on** to the next item when done.
 - **Sync:** stepper, narrator, map caption, featured label, list row, spotlight and inspector status all update from the same event.
