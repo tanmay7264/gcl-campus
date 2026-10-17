@@ -82,7 +82,8 @@ function getDashboard(token) {
   var me = requireUser_(token);
   var users = readAll_('Users').map(publicUser_);
   var activity = readAll_('Activity').sort(function (a, b) { return new Date(b.at) - new Date(a.at); }).slice(0, 600).map(plain_);
-  return { me: me, challenges: readAll_('Challenges').map(plain_), activity: activity, users: users, generatedAt: new Date().toISOString() };
+  return { me: me, challenges: readAll_('Challenges').map(plain_), activity: activity, users: users,
+    people: readAll_('People').map(publicPerson_), tasks: readAll_('Tasks').map(plain_), generatedAt: new Date().toISOString() };
 }
 
 function canEdit_(me, c) {

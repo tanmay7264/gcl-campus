@@ -1,7 +1,7 @@
-// GCL Command Centre: sign-in, command centre, pipeline board, challenge table, partners, team.
+// GCL Command Centre: sign-in, command centre, pipeline board, challenges, people & tasks, partners, team.
 // Talks to apps-script/ through ../api.js. All writes go through the server, which enforces roles.
-import { api, esc } from '../api.js?v=20';
-import { STAGES, ST, PATH, TYPES } from '../crm-stages.js?v=20';
+import { api, esc } from '../api.js?v=21';
+import { STAGES, ST, PATH, TYPES, PERSON_TYPES, PT, TASK_STATUSES, TS } from '../crm-stages.js?v=21';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -94,10 +94,10 @@ async function load(quiet) {
   D.challenges.forEach(c => { c.org = String(c.organisation).replace(/^'/, ''); });
   route();
 }
-async function refresh() { await load(true); if (openId) openChallenge(openId, true); }
+async function refresh() { await load(true); if (openId) openChallenge(openId, true); else if (openPersonId && drawer.open) openPerson(openPersonId); }
 
 /* ---------- shell + routing ---------- */
-const VIEWS = [['home', 'space_dashboard', 'Command Centre'], ['pipeline', 'view_kanban', 'Pipeline'], ['challenges', 'table_rows', 'Challenges'], ['partners', 'handshake', 'Partners'], ['team', 'group', 'Team']];
+const VIEWS = [['home', 'space_dashboard', 'Command Centre'], ['pipeline', 'view_kanban', 'Pipeline'], ['challenges', 'table_rows', 'Challenges'], ['people', 'diversity_3', 'People'], ['tasks', 'task_alt', 'Tasks'], ['partners', 'handshake', 'Partners'], ['team', 'group', 'Team']];
 function route() {
   const h = location.hash.slice(1);
   if (h.startsWith('c=')) { openId = h.slice(2); if (!VIEWS.some(v => v[0] === view)) view = 'home'; }
@@ -109,7 +109,7 @@ addEventListener('hashchange', () => D && route());
 
 function render() {
   const att = attention(D.challenges);
-  const title = { home: ['Command Centre', `${D.challenges.filter(LIVE).length} live challenges · updated ${new Date(D.generatedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`], pipeline: ['Pipeline', 'Drag a card to move it to the next stage'], challenges: ['Challenges', 'Every challenge, searchable and exportable'], partners: ['Partners', 'Companies who brought us challenges'], team: ['Team', me.role === 'Admin' ? 'Who can sign in, and what they own' : 'Your GCL teammates'] }[view];
+  const title = { home: ['Command Centre', `${D.challenges.filter(LIVE).length} live challenges · updated ${new Date(D.generatedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`], pipeline: ['Pipeline', 'Drag a card to move it to the next stage'], challenges: ['Challenges', 'Every challenge, searchable and exportable'], people: ['People', 'Students, faculty, companies, mentors and other stakeholders'], tasks: ['Tasks', 'Work assigned to people and teams, with deadlines and progress'], partners: ['Partners', 'Companies who brought us challenges'], team: ['Team', me.role === 'Admin' ? 'Who can sign in, and what they own' : 'Your GCL teammates'] }[view];
   Object.values(charts).forEach(ch => ch.destroy()); for (const k in charts) delete charts[k];
   app.innerHTML = `<div class="shell">
     <nav class="side" aria-label="Sections">
@@ -126,8 +126,8 @@ function render() {
       </div>
       <div class="page" id="page"></div>
     </div></div>`;
-  ({ home: renderHome, pipeline: renderPipeline, challenges: renderTable, partners: renderPartners, team: renderTeam })[view](att);
-  $('#q').oninput = e => { F.q = e.target.value; if (view !== 'challenges') { location.hash = 'challenges'; setTimeout(() => $('#q')?.focus(), 0); } else renderTable(); };
+  ({ home: renderHome, pipeline: renderPipeline, challenges: renderTable, people: renderPeople, tasks: renderTasks, partners: renderPartners, team: renderTeam })[view](att);
+  $('#q').oninput = e => { F.q = e.target.value; if (view === 'people') return renderPeople(); if (view === 'tasks') return renderTasksOut(); if (view !== 'challenges') { location.hash = 'challenges'; setTimeout(() => $('#q')?.focus(), 0); } else renderTable(); };
 }
 
 /* ---------- Command Centre ---------- */
@@ -164,15 +164,17 @@ function renderHome(att) {
       <section class="card s4"><header>${ms('donut_large')}<h3>By challenge type</h3></header><div class="chartbox"><canvas id="chType"></canvas></div></section>
       <section class="card s6"><header>${ms('trending_up')}<h3>Submissions</h3><small>last 12 weeks</small></header><div class="chartbox"><canvas id="chTrend"></canvas></div></section>
       <section class="card s6"><header>${ms('groups')}<h3>Workload by owner</h3><small>live challenges</small></header><div class="chartbox"><canvas id="chOwner"></canvas></div></section>
-      <section class="card s12"><header>${ms('history')}<h3>Recent activity</h3><small>everything the team did, newest first</small></header>${feed(D.activity.slice(0, 12), true)}</section>
+      <section class="card s5"><header>${ms('assignment_late')}<h3>Task deadlines</h3><small>overdue and next 7 days</small><a href="#tasks" class="btn ghost sm">All tasks</a></header>${(() => { const due = D.tasks.filter(t => isLate(t) || dueSoon(t, 7)).sort((a, b) => new Date(a.due) - new Date(b.due)).slice(0, 8); return due.length ? `<ul class="agenda">${due.map(t => { const d = new Date(t.due); return `<li class="linkrow" data-task="${t.id}"><span class="date ${isLate(t) ? 'late' : ''}"><small>${d.toLocaleDateString('en-IN', { month: 'short' })}</small><b>${d.getDate()}</b></span><div style="flex:1;min-width:0"><b>${esc(t.title)}</b><br><span class="row">${bar(t.progress, isLate(t))}<small>${Number(t.progress) || 0}% · ${TS[t.status].label}</small></span></div><span class="row" style="gap:2px">${whoLabel(t)}</span></li>`; }).join('')}</ul>` : '<p class="empty">No task deadlines this week.</p>'; })()}</section>
+      <section class="card s7"><header>${ms('history')}<h3>Recent activity</h3><small>everything the team did, newest first</small></header>${feed(D.activity.slice(0, 12), true)}</section>
     </div>`;
   $$('[data-att]').forEach(b => b.onclick = () => actOn(mine[b.dataset.att], b));
   $$('[data-go]').forEach(b => b.onclick = () => { const g = b.dataset.go; if (g.startsWith('stage:')) { Object.assign(F, { stage: g.slice(6), type: '', owner: '', priority: '', q: '' }); location.hash = 'challenges'; } else location.hash = g; });
+  bindTaskRows($('#page'));
   drawCharts(C);
 }
 
 function feed(list, withOrg) {
-  const icon = { stage: 'swap_horiz', note: 'sticky_note_2', email: 'mail', assign: 'person_add', touchpoint: 'event', edit: 'edit' };
+  const icon = { stage: 'swap_horiz', note: 'sticky_note_2', email: 'mail', assign: 'person_add', touchpoint: 'event', edit: 'edit', task: 'task_alt' };
   if (!list.length) return '<p class="empty">No activity yet.</p>';
   return `<ul class="feed">${list.map(a => { const c = D.challenges.find(x => x.id === a.challengeId); return `<li>${ms(icon[a.kind] || 'bolt')}<div style="flex:1;min-width:0"><p><b>${esc(a.user)}</b> ${withOrg && c ? `· <a href="#c=${c.id}">${org(c)}</a>` : ''}</p><p>${esc(a.detail)}</p></div><small>${ago(a.at)}</small></li>`; }).join('')}</ul>`;
 }
@@ -340,8 +342,10 @@ function renderTeam() {
 function openChallenge(id, keepScroll) {
   const c = D.challenges.find(x => x.id === id);
   if (!c) { toast(`Challenge ${id} not found`); return closeDrawer(); }
-  openId = id;
+  openId = id; openPersonId = null;
   const edit = canEdit(c), claim = !c.owner && !edit;
+  const ctasks = D.tasks.filter(t => t.challengeId === id).sort((a, b) => (a.status === 'done') - (b.status === 'done') || new Date(a.due || 8e15) - new Date(b.due || 8e15));
+  const cpeople = D.people.filter(p => p.active && (String(p.challengeIds).split(',').map(x => x.trim()).includes(id) || (c.studentTeam && p.team === c.studentTeam)));
   const acts = D.activity.filter(a => a.challengeId === id);
   const pi = PATH.findIndex(s => s.key === c.stage);
   const opt = (v, l, cur) => `<option value="${esc(v)}" ${v === cur ? 'selected' : ''}>${esc(l)}</option>`;
@@ -374,16 +378,21 @@ function openChallenge(id, keepScroll) {
         <label class="f">What<input name="touchpointLabel" value="${esc(c.touchpointLabel)}" ${dis} placeholder="e.g. Prototype review"></label>
         <label class="f">When<input name="touchpointDate" type="date" value="${c.touchpointDate ? String(c.touchpointDate).slice(0, 10) : ''}" ${dis}></label>
         ${edit ? '<div class="row" style="grid-column:1/-1"><span class="grow"></span><button class="btn soft sm">Save touchpoint</button></div>' : ''}</form></section>
+      <section class="sec"><h4>Tasks<span>${ctasks.length ? `${ctasks.filter(t => t.status === 'done').length}/${ctasks.length} done · ${avg(ctasks)}% overall ` : ''}<button class="btn sm" data-newtask-ch="${c.id}">${ms('add_task')}Add task</button></span></h4>
+        ${ctasks.length ? `<div class="row" style="margin-bottom:8px">${bar(avg(ctasks), ctasks.some(isLate))}<small>${ctasks.filter(isLate).length ? ctasks.filter(isLate).length + ' overdue' : 'on track'}</small></div>` : ''}${taskList(ctasks)}</section>
+      <section class="sec"><h4>People on this challenge<span>${c.studentTeam ? esc(c.studentTeam) + ' · ' : ''}${cpeople.length}</span></h4>${cpeople.length ? `<div class="row">${cpeople.map(p => `<button class="chip" data-person="${p.id}" style="background:${PT[p.type].color}1F;color:${PT[p.type].color}">${ms(PT[p.type].icon)}${esc(p.name)}</button>`).join('')}</div>` : '<p class="muted">Link people from the People section (or set the student team above to match a team).</p>'}</section>
       <section class="sec"><h4>Keep the company in the loop</h4><div class="row">
         ${edit ? `<button class="btn sm" data-act="compose">${ms('mail')}Email the company</button>` : ''}
         <button class="btn ghost sm" data-act="copytrack">${ms('content_copy')}Copy tracking link</button><a class="btn ghost sm" href="${trackUrl(c)}" target="_blank" rel="noopener">${ms('open_in_new')}See what they see</a></div></section>
       ${edit ? `<section class="sec"><h4>Add a note</h4><form id="note" style="display:flex;flex-direction:column;gap:8px"><textarea name="text" rows="3" placeholder="What happened? What is next?" required></textarea>
         <div class="row"><label class="check"><input type="checkbox" name="shared"> Share with the company (shows on their tracker)</label><span class="grow"></span><button class="btn soft sm">${ms('add')}Add note</button></div></form></section>` : ''}
-      <section class="sec"><h4>Timeline<span>${acts.length} entries</span></h4>${acts.length ? `<ul class="tl">${acts.map(a => `<li>${ms({ stage: 'swap_horiz', note: 'sticky_note_2', email: 'mail', assign: 'person_add', touchpoint: 'event' }[a.kind] || 'bolt')}<div style="flex:1;min-width:0"><p><b>${esc(a.user)}</b> · <small>${new Date(a.at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</small></p><p>${esc(a.detail)}</p>${a.shared === true || a.shared === 'TRUE' ? '<span class="sh">✓ Visible to company</span>' : ''}</div></li>`).join('')}</ul>` : '<p class="muted">No activity yet.</p>'}</section>
+      <section class="sec"><h4>Timeline<span>${acts.length} entries</span></h4>${acts.length ? `<ul class="tl">${acts.map(a => `<li>${ms({ stage: 'swap_horiz', note: 'sticky_note_2', email: 'mail', assign: 'person_add', touchpoint: 'event', task: 'task_alt' }[a.kind] || 'bolt')}<div style="flex:1;min-width:0"><p><b>${esc(a.user)}</b> · <small>${new Date(a.at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</small></p><p>${esc(a.detail)}</p>${a.shared === true || a.shared === 'TRUE' ? '<span class="sh">✓ Visible to company</span>' : ''}</div></li>`).join('')}</ul>` : '<p class="muted">No activity yet.</p>'}</section>
     </div>`;
   if (!drawer.open) drawer.showModal();
   drawer.scrollTop = keepScroll ? top : 0;
   if (location.hash !== '#c=' + id) history.replaceState(null, '', '#c=' + id);
+  bindTaskRows(drawer);
+  $$('[data-person]', drawer).forEach(b => b.onclick = () => openPerson(b.dataset.person));
 
   $$('[data-stage]', drawer).forEach(b => b.onclick = () => b.dataset.stage !== c.stage && moveStage(c, b.dataset.stage));
   const patchFrom = (f, keys) => Object.fromEntries(keys.map(k => [k, f[k].value]).filter(([k, v]) => String(v) !== String(k === 'touchpointDate' && c[k] ? String(c[k]).slice(0, 10) : c[k] ?? '')));
@@ -394,7 +403,7 @@ function openChallenge(id, keepScroll) {
   if (nf) nf.onsubmit = async e => { e.preventDefault(); if (nf.text.value.trim().length < 2) return toast('Write a note first'); await run($('button', nf), () => api('addNote', token, c.id, nf.text.value, nf.shared.checked)); toast(nf.shared.checked ? 'Note added and shared with the company' : 'Note added'); refresh(); };
 }
 function closeDrawer() { openId = null; if (drawer.open) drawer.close(); if (location.hash.startsWith('#c=')) history.replaceState(null, '', '#' + view); }
-drawer.addEventListener('close', () => { openId = null; if (location.hash.startsWith('#c=')) history.replaceState(null, '', '#' + view); });
+drawer.addEventListener('close', () => { openId = null; openPersonId = null; if (location.hash.startsWith('#c=')) history.replaceState(null, '', '#' + view); });
 drawer.addEventListener('click', e => { if (e.target === drawer) closeDrawer(); });
 modal.addEventListener('click', e => { if (e.target === modal) modal.close(); });
 
@@ -430,6 +439,12 @@ document.addEventListener('click', async e => {
     close: closeDrawer,
     compose: () => compose(c),
     copytrack: async () => { await navigator.clipboard.writeText(trackUrl(c)); toast('Tracking link copied'); },
+    newperson: () => newPerson(),
+    importpeople: () => importPeople(),
+    newtask: () => taskModal({}),
+    copytasks: async () => { await navigator.clipboard.writeText(peopleUrl(personById(openPersonId))); toast('Task link copied'); },
+    mailtasks: async () => { await run(b, () => api('sendTaskLink', token, openPersonId)); toast('Task link emailed'); },
+    toggleperson: async () => { const p = personById(openPersonId); await run(b, () => api('savePerson', token, { ...p, active: !p.active })); toast(p.active ? 'Deactivated' : 'Reactivated'); refresh(); },
     claim: async () => { await run(b, () => api('updateChallenge', token, c.id, { owner: me.email })); toast(`${c.id} is now yours`); refresh(); },
   })[b.dataset.act]?.();
 });
@@ -437,3 +452,228 @@ document.addEventListener('click', async e => {
 /* ---------- boot ---------- */
 const invite = location.hash.match(/^#invite=([0-9a-f]+)$/);
 if (invite) showInvite(invite[1]); else if (token) load(); else showLogin();
+
+/* =====================================================================
+   People (stakeholders) and Tasks: deadlines, assignees, progress
+   ===================================================================== */
+let openPersonId = null;
+const T = { status: '', who: '', challenge: '', due: '', layout: 'board' };
+const personById = id => D.people.find(p => p.id === id);
+const teams = () => [...new Set(D.people.filter(p => p.active && p.team).map(p => p.team))].sort();
+const membersOf = team => D.people.filter(p => p.active && p.team === team);
+const keysOf = t => String(t.assignees || '').split(',').map(s => s.trim()).filter(Boolean);
+const assignedPeople = t => D.people.filter(p => p.active && keysOf(t).some(k => k === p.id || (k.startsWith('team:') && p.team && k.slice(5) === p.team)));
+const tasksOf = p => D.tasks.filter(t => assignedPeople(t).some(x => x.id === p.id));
+const isLate = t => t.status !== 'done' && t.due && new Date(t.due) < Date.now() - DAY / 2;
+const dueSoon = (t, n) => t.status !== 'done' && t.due && !isLate(t) && new Date(t.due) - Date.now() < n * DAY;
+const canEditTask = t => !t.id || me.role === 'Admin' || t.createdBy === me.email || (t.challengeId && D.challenges.some(c => c.id === t.challengeId && canEdit(c)));
+const bar = (p, late) => `<span class="pbar${late ? ' late' : ''}" title="${p}%"><i style="width:${Number(p) || 0}%"></i></span>`;
+const avg = list => list.length ? Math.round(list.reduce((s, t) => s + (Number(t.progress) || 0), 0) / list.length) : 0;
+const tsChip = s => `<span class="chip" style="background:${TS[s].color}1F;color:${TS[s].color}"><i></i>${TS[s].label}</span>`;
+const ptChip = type => `<span class="chip" style="background:${PT[type].color}1F;color:${PT[type].color}">${ms(PT[type].icon)}${type}</span>`;
+const pAvatar = p => `<span class="av" style="background:${PT[p.type]?.color || '#7A7590'}" title="${esc(p.name)} · ${esc(p.type)}">${initials(p.name)}</span>`;
+const dueChip = t => !t.due ? '<small>—</small>' : t.status === 'done' ? `<small>${fmt(t.due)}</small>` : isLate(t) ? `<span class="chip red">${ms('schedule')}${fmt(t.due)}</span>` : dueSoon(t, 3) ? `<span class="chip orange">${fmt(t.due)}</span>` : `<small>${fmt(t.due)}</small>`;
+const whoLabel = t => keysOf(t).map(k => k.startsWith('team:') ? `<span class="chip purple">${ms('groups')}${esc(k.slice(5))}</span>` : personById(k) ? pAvatar(personById(k)) : '').join('') || '<small>Unassigned</small>';
+const peopleUrl = p => new URL('../tasks/#' + p.accessToken, location.href).href;
+
+/* ---------- People view ---------- */
+function renderPeople() {
+  const q = F.q.trim().toLowerCase(), type = F.ptype || '';
+  const list = D.people.filter(p => (!type || p.type === type) && (!q || [p.name, p.email, p.organisation, p.team, p.role, p.id].join(' ').toLowerCase().includes(q)))
+    .sort((a, b) => (b.active - a.active) || a.type.localeCompare(b.type) || String(a.team).localeCompare(String(b.team)) || a.name.localeCompare(b.name));
+  $('#page').innerHTML = `
+    <section class="card"><div class="row">
+      <button class="chip ${!type ? 'purple' : ''}" data-ptype="">All · ${D.people.filter(p => p.active).length}</button>
+      ${PERSON_TYPES.map(t => `<button class="chip" data-ptype="${t.key}" style="${type === t.key ? `background:${t.color};color:#fff` : `background:${t.color}1F;color:${t.color}`}">${ms(t.icon)}${t.key} · ${D.people.filter(p => p.active && p.type === t.key).length}</button>`).join('')}
+      <span class="grow"></span><button class="btn ghost" data-act="importpeople">${ms('upload')}Import a list</button><button class="btn" data-act="newperson">${ms('person_add')}Add person</button></div></section>
+    <section class="card scroll">${list.length ? `<table class="tbl"><thead><tr><th>Person</th><th>Type</th><th>Team / organisation</th><th>Challenges</th><th>Open tasks</th><th>Progress</th></tr></thead><tbody>
+      ${list.map(p => { const ts = tasksOf(p), open = ts.filter(t => t.status !== 'done'), late = open.filter(isLate); return `<tr data-person="${p.id}" style="${p.active ? '' : 'opacity:.5'}">
+        <td><div class="org">${pAvatar(p)}<div><b>${esc(p.name)}${/^DEMO-/.test(p.id) ? ' <span class="chip">Demo</span>' : ''}</b><small>${esc(p.email || 'no email')}${p.role ? ' · ' + esc(p.role) : ''}</small></div></div></td>
+        <td>${ptChip(p.type)}</td><td><small>${esc(p.team || p.organisation || '—')}</small></td>
+        <td><small>${esc(String(p.challengeIds || '').split(',').filter(Boolean).join(', ') || '—')}</small></td>
+        <td>${open.length}${late.length ? ` <span class="chip red">${late.length} overdue</span>` : ''}</td><td>${ts.length ? bar(avg(ts), late.length) + ` <small>${avg(ts)}%</small>` : '<small>—</small>'}</td></tr>`; }).join('')}
+    </tbody></table>` : '<p class="empty">No people match. Add students, faculty, company contacts and mentors here.</p>'}</section>`;
+  $$('[data-ptype]').forEach(b => b.onclick = () => { F.ptype = b.dataset.ptype; renderPeople(); });
+  $$('[data-person]').forEach(r => r.onclick = () => openPerson(r.dataset.person));
+}
+
+function personForm(p = {}) {
+  const opt = (v, l, cur) => `<option value="${esc(v)}" ${v === cur ? 'selected' : ''}>${esc(l)}</option>`;
+  return `<div class="form2">
+    <label class="f">Type<select name="type">${PERSON_TYPES.map(t => opt(t.key, t.key, p.type || F.ptype || 'Student')).join('')}</select></label>
+    <label class="f">Name<input name="name" value="${esc(p.name)}" required></label>
+    <label class="f">Email<input name="email" type="email" value="${esc(p.email)}" placeholder="needed to email tasks"></label>
+    <label class="f">Phone<input name="phone" value="${esc(p.phone)}"></label>
+    <label class="f">Student team<input name="team" list="teamlist" value="${esc(p.team)}" placeholder="e.g. Team A (students)"></label>
+    <label class="f">Organisation / department<input name="organisation" value="${esc(p.organisation)}"></label>
+    <label class="f">Role / title<input name="role" value="${esc(p.role)}" placeholder="e.g. Team lead, CSR head"></label>
+    <label class="f">Linked challenges<input name="challengeIds" list="chlist" value="${esc(p.challengeIds)}" placeholder="e.g. GCL-26-004, GCL-26-007"></label>
+    <label class="f" style="grid-column:1/-1">Notes<textarea name="notes" rows="2">${esc(p.notes)}</textarea></label>
+    <datalist id="teamlist">${teams().map(t => `<option value="${esc(t)}">`).join('')}</datalist>
+    <datalist id="chlist">${D.challenges.map(c => `<option value="${c.id}">${esc(c.org)}</option>`).join('')}</datalist></div>`;
+}
+const formData = f => Object.fromEntries(new FormData(f));
+
+function newPerson() {
+  modal.innerHTML = `<form method="dialog" novalidate><div class="mh"><div class="kick">People</div><h2>Add a person</h2><small>Students, faculty, company contacts, mentors or anyone else involved.</small></div>
+    <div class="mb">${personForm()}<p class="err"></p></div><div class="mf"><button class="btn ghost" value="cancel">Cancel</button><button class="btn" data-ok>${ms('person_add')}Add</button></div></form>`;
+  $('[data-ok]', modal).onclick = async e => {
+    e.preventDefault();
+    try { const p = await run(e.currentTarget, () => api('savePerson', token, formData($('form', modal)))); modal.close(); toast(`${p.name} added`); await refresh(); openPerson(p.id); }
+    catch (err) { $('.err', modal).textContent = err.message; }
+  };
+  modal.showModal();
+}
+
+function importPeople() {
+  modal.innerHTML = `<form method="dialog" novalidate><div class="mh"><div class="kick">People</div><h2>Import a list</h2><small>One person per line: <b>Name, email, team</b> for students, or <b>Name, email, organisation</b> for everyone else. Paste straight from a spreadsheet (tabs work too). Duplicate emails are skipped.</small></div>
+    <div class="mb"><label class="f">Who are they?<select name="type">${PERSON_TYPES.map(t => `<option ${t.key === (F.ptype || 'Student') ? 'selected' : ''}>${t.key}</option>`).join('')}</select></label>
+      <label class="f">List<textarea name="text" rows="9" placeholder="Aarav Shah, aarav.shah@welingkar.org, Team Sustain X&#10;Diya Menon, diya.menon@welingkar.org, Team Sustain X"></textarea></label><p class="err"></p></div>
+    <div class="mf"><button class="btn ghost" value="cancel">Cancel</button><button class="btn" data-ok>${ms('upload')}Import</button></div></form>`;
+  $('[data-ok]', modal).onclick = async e => {
+    e.preventDefault();
+    const f = $('form', modal);
+    try { const r = await run(e.currentTarget, () => api('importPeople', token, f.type.value, f.text.value)); modal.close(); toast(`Added ${r.added}${r.skipped.length ? `, skipped ${r.skipped.length} (duplicate or invalid)` : ''}`); refresh(); }
+    catch (err) { $('.err', modal).textContent = err.message; }
+  };
+  modal.showModal();
+}
+
+function openPerson(id) {
+  const p = personById(id);
+  if (!p) return;
+  openPersonId = id; openId = null;
+  const ts = tasksOf(p).sort((a, b) => (a.status === 'done') - (b.status === 'done') || new Date(a.due || 8e15) - new Date(b.due || 8e15));
+  const linked = String(p.challengeIds || '').split(',').map(s => s.trim()).filter(Boolean).map(cid => D.challenges.find(c => c.id === cid)).filter(Boolean)
+    .concat(p.team ? D.challenges.filter(c => c.studentTeam === p.team) : []).filter((c, i, a) => a.indexOf(c) === i);
+  drawer.innerHTML = `<div class="dw-h"><span class="tile lg" style="background:${PT[p.type].color}">${initials(p.name)}</span><div class="t"><div class="kick">${p.id} · ${esc(p.type)}</div><h2>${esc(p.name)}</h2>
+      <div class="row" style="margin-top:6px">${p.active ? '' : '<span class="chip">Deactivated</span>'}${p.team ? `<span class="chip purple">${ms('groups')}${esc(p.team)}</span>` : ''}<small>${ts.filter(t => t.status !== 'done').length} open tasks · ${avg(ts)}% average progress</small></div></div>
+      <button class="icon" data-act="close" aria-label="Close">${ms('close')}</button></div>
+    <div class="dw-b">
+      <section class="sec"><h4>Tasks<span><button class="btn sm" data-newtask-for="${p.id}">${ms('add_task')}Assign a task</button></span></h4>${taskList(ts)}</section>
+      <section class="sec"><h4>Their private task page<span>no sign-in needed</span></h4><p class="muted" style="margin-bottom:8px">${esc(String(p.name).split(' ')[0])} can see their tasks and update status and progress here. Only share it with them.</p>
+        <div class="row"><button class="btn ghost sm" data-act="copytasks">${ms('content_copy')}Copy link</button>${p.email ? `<button class="btn soft sm" data-act="mailtasks">${ms('mail')}Email them the link</button>` : '<small>Add an email to send it.</small>'}<a class="btn ghost sm" href="${peopleUrl(p)}" target="_blank" rel="noopener">${ms('open_in_new')}See what they see</a></div></section>
+      ${linked.length ? `<section class="sec"><h4>Challenges</h4>${linked.map(c => `<div class="row linkrow" data-open="${c.id}" style="padding:6px 0">${orgTile(c)}<b>${org(c)}</b>${stageChip(c.stage)}<small>${c.id}</small></div>`).join('')}</section>` : ''}
+      <section class="sec"><h4>Details</h4><form id="pform" novalidate>${personForm(p)}<div class="row" style="margin-top:10px">${me.role === 'Admin' ? `<button type="button" class="btn ghost sm" data-act="toggleperson">${p.active ? 'Deactivate' : 'Reactivate'}</button>` : ''}<span class="grow"></span><button class="btn soft sm">Save changes</button></div></form></section>
+    </div>`;
+  if (!drawer.open) drawer.showModal();
+  $('#pform').onsubmit = async e => { e.preventDefault(); await run($('#pform button:last-of-type'), () => api('savePerson', token, { ...formData(e.target), id: p.id, active: p.active })); toast('Saved'); refresh(); };
+  bindTaskRows(drawer);
+}
+
+/* ---------- Tasks view ---------- */
+function taskFilter() {
+  const q = F.q.trim().toLowerCase();
+  return D.tasks.filter(t => (!q || [t.title, t.details, t.id, t.challengeId, ...assignedPeople(t).map(p => p.name)].join(' ').toLowerCase().includes(q))
+    && (!T.status || t.status === T.status) && (!T.challenge || t.challengeId === T.challenge)
+    && (!T.who || (T.who === 'mine' ? t.createdBy === me.email : T.who.startsWith('team:') ? keysOf(t).includes(T.who) : assignedPeople(t).some(p => p.id === T.who)))
+    && (!T.due || (T.due === 'late' ? isLate(t) : T.due === 'week' ? (isLate(t) || dueSoon(t, 7)) : !t.due)));
+}
+function renderTasks() {
+  const all = D.tasks, open = all.filter(t => t.status !== 'done');
+  const opt = (v, l, cur) => `<option value="${esc(v)}" ${v === cur ? 'selected' : ''}>${esc(l)}</option>`;
+  const k = (ic, bg, fg, l, v, s, f) => `<button class="kpi" data-tq='${f}'><span class="ic" style="background:${bg};color:${fg}">${ms(ic)}</span><div><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div></button>`;
+  $('#page').innerHTML = `
+    <section class="kpis">
+      ${k('pending_actions', '#F1EEF7', '#66518A', 'Open tasks', open.length, `${all.length} in total`, '{"due":"","status":""}')}
+      ${k('assignment_late', '#FBECEB', '#C0504D', 'Overdue', open.filter(isLate).length, 'past their deadline', '{"due":"late","status":""}')}
+      ${k('event_upcoming', '#FFF3E6', '#9A5413', 'Due in 7 days', open.filter(t => dueSoon(t, 7)).length, 'coming up', '{"due":"week","status":""}')}
+      ${k('block', '#FBECEB', '#C0504D', 'Blocked', all.filter(t => t.status === 'blocked').length, 'need help', '{"status":"blocked","due":""}')}
+      ${k('task_alt', '#EAF4DD', '#3F5E1C', 'Done', all.length - open.length, `${all.filter(t => t.completedAt && Date.now() - new Date(t.completedAt) < 7 * DAY).length} this week`, '{"status":"done","due":""}')}
+      ${k('speed', '#E5F4F1', '#2C7A6C', 'Average progress', avg(open) + '%', 'across open tasks', '{"due":"","status":""}')}
+    </section>
+    <section class="card"><div class="filters">
+      <label class="f">Status<select data-t="status">${opt('', 'Any status', T.status)}${TASK_STATUSES.map(s => opt(s.key, s.label, T.status)).join('')}</select></label>
+      <label class="f">Assigned to<select data-t="who">${opt('', 'Anyone', T.who)}${opt('mine', 'Created by me', T.who)}${teams().map(t => opt('team:' + t, 'Team · ' + t, T.who)).join('')}${D.people.filter(p => p.active).map(p => opt(p.id, p.name + ' (' + p.type + ')', T.who)).join('')}</select></label>
+      <label class="f">Challenge<select data-t="challenge">${opt('', 'Any challenge', T.challenge)}${D.challenges.filter(c => D.tasks.some(t => t.challengeId === c.id)).map(c => opt(c.id, c.org + ' · ' + c.id, T.challenge)).join('')}</select></label>
+      <label class="f">Deadline<select data-t="due">${opt('', 'Any time', T.due)}${opt('late', 'Overdue', T.due)}${opt('week', 'Overdue or next 7 days', T.due)}${opt('none', 'No deadline', T.due)}</select></label>
+      <span style="flex:1"></span>
+      <div class="seg"><button class="${T.layout === 'board' ? 'on' : ''}" data-layout="board">${ms('view_kanban')}Board</button><button class="${T.layout === 'list' ? 'on' : ''}" data-layout="list">${ms('list')}List</button></div>
+      <button class="btn" data-act="newtask">${ms('add_task')}New task</button></div></section>
+    <div id="tasksOut"></div>`;
+  $$('[data-t]').forEach(s => s.onchange = () => { T[s.dataset.t] = s.value; renderTasksOut(); });
+  $$('[data-layout]').forEach(b => b.onclick = () => { T.layout = b.dataset.layout; renderTasks(); });
+  $$('[data-tq]').forEach(b => b.onclick = () => { Object.assign(T, JSON.parse(b.dataset.tq)); renderTasks(); });
+  renderTasksOut();
+}
+function renderTasksOut() {
+  const list = taskFilter().sort((a, b) => new Date(a.due || 8e15) - new Date(b.due || 8e15));
+  const out = $('#tasksOut');
+  if (T.layout === 'list') { out.innerHTML = `<section class="card scroll">${taskList(list, true)}</section>`; return bindTaskRows(out); }
+  out.innerHTML = `<div class="board">${TASK_STATUSES.map(s => { const ts = list.filter(t => t.status === s.key); return `<section class="col" data-tstatus="${s.key}"><header><i style="background:${s.color}"></i>${s.label}<span>${ts.length}</span></header><div class="cards">${ts.map(t => `
+    <button class="kc" data-task="${t.id}" draggable="${canEditTask(t)}"><span class="t"><span class="pri ${esc(t.priority)}"></span><b>${esc(t.title)}</b></span>
+      ${t.challengeId ? `<span class="m">${esc(D.challenges.find(c => c.id === t.challengeId)?.org || '')} · ${t.challengeId}</span>` : ''}
+      <span class="row">${bar(t.progress, isLate(t))}<small>${Number(t.progress) || 0}%</small></span>
+      <span class="m"><span class="row" style="gap:3px">${whoLabel(t)}</span><span class="grow"></span>${dueChip(t)}</span></button>`).join('')}</div></section>`; }).join('')}</div>`;
+  bindTaskRows(out);
+  let drag = null;
+  $$('.kc[data-task]', out).forEach(k => { k.ondragstart = () => { drag = k.dataset.task; k.classList.add('dragging'); }; k.ondragend = () => { k.classList.remove('dragging'); $$('.col', out).forEach(c => c.classList.remove('over')); }; });
+  $$('.col', out).forEach(col => {
+    col.ondragover = e => { if (drag) { e.preventDefault(); col.classList.add('over'); } };
+    col.ondragleave = () => col.classList.remove('over');
+    col.ondrop = async e => {
+      e.preventDefault(); col.classList.remove('over');
+      const t = D.tasks.find(x => x.id === drag); drag = null;
+      if (!t || t.status === col.dataset.tstatus) return;
+      await run(null, () => api('saveTask', token, { ...t, status: col.dataset.tstatus, progress: col.dataset.tstatus === 'done' ? 100 : t.progress }, {}));
+      toast(`"${t.title}" → ${TS[col.dataset.tstatus].label}`); refresh();
+    };
+  });
+}
+
+// Shared task table (Tasks list view, person drawer, challenge drawer).
+function taskList(ts, wide) {
+  if (!ts.length) return '<p class="muted">No tasks yet.</p>';
+  return `<div class="scroll"><table class="tbl"><thead><tr><th>Task</th>${wide ? '<th>Challenge</th>' : ''}<th>Assigned</th><th>Deadline</th><th>Status</th><th>Progress</th></tr></thead><tbody>
+    ${ts.map(t => `<tr data-task="${t.id}"><td><b>${esc(t.title)}</b>${t.details ? `<br><small>${esc(String(t.details).slice(0, 70))}${t.details.length > 70 ? '…' : ''}</small>` : ''}</td>
+      ${wide ? `<td><small>${t.challengeId ? esc(D.challenges.find(c => c.id === t.challengeId)?.org || '') + '<br>' + t.challengeId : '—'}</small></td>` : ''}
+      <td><span class="row" style="gap:3px">${whoLabel(t)}</span></td><td>${dueChip(t)}</td><td>${tsChip(t.status)}</td><td style="min-width:110px">${bar(t.progress, isLate(t))} <small>${Number(t.progress) || 0}%</small></td></tr>`).join('')}</tbody></table></div>`;
+}
+function bindTaskRows(root) {
+  $$('[data-task]', root).forEach(r => r.onclick = e => { e.stopPropagation(); taskModal(D.tasks.find(t => t.id === r.dataset.task)); });
+  $$('[data-newtask-for]', root).forEach(b => b.onclick = () => taskModal({ assignees: b.dataset.newtaskFor }));
+  $$('[data-newtask-ch]', root).forEach(b => { const c = D.challenges.find(x => x.id === b.dataset.newtaskCh); b.onclick = () => taskModal({ challengeId: c.id, assignees: c.studentTeam && teams().includes(c.studentTeam) ? 'team:' + c.studentTeam : '' }); });
+}
+
+/* ---------- Task modal: create / edit / remind / delete ---------- */
+function taskModal(t = {}) {
+  const isNew = !t.id, edit = canEditTask(t), dis = edit ? '' : 'disabled';
+  const chosen = new Set(keysOf(t));
+  const opt = (v, l, cur) => `<option value="${esc(v)}" ${v === cur ? 'selected' : ''}>${esc(l)}</option>`;
+  const choices = [...teams().map(tm => ({ key: 'team:' + tm, label: tm, sub: `Student team · ${membersOf(tm).length} people`, icon: 'groups', color: '#66518A' })),
+    ...D.people.filter(p => p.active || chosen.has(p.id)).map(p => ({ key: p.id, label: p.name, sub: p.type + (p.team ? ' · ' + p.team : p.organisation ? ' · ' + p.organisation : ''), icon: PT[p.type].icon, color: PT[p.type].color }))];
+  modal.innerHTML = `<form method="dialog" novalidate><div class="mh"><div class="kick">${isNew ? 'New task' : t.id + (t.createdBy ? ' · created by ' + esc(userName(t.createdBy)) : '')}</div><h2>${isNew ? 'Assign a task' : esc(t.title)}</h2>${edit ? '' : '<small>View only: the task creator, the challenge owner or an Admin can change it.</small>'}</div>
+    <div class="mb">
+      <label class="f">Task<input name="title" value="${esc(t.title)}" ${dis} placeholder="e.g. Interview 8 small-shop owners" required></label>
+      <label class="f">Details<textarea name="details" rows="3" ${dis} placeholder="What does done look like?">${esc(t.details)}</textarea></label>
+      <div class="form2">
+        <label class="f">Challenge<select name="challengeId" ${dis}>${opt('', 'Not linked', t.challengeId || '')}${D.challenges.filter(c => OPEN(c) || c.id === t.challengeId).map(c => opt(c.id, c.org + ' · ' + c.id, t.challengeId || '')).join('')}</select></label>
+        <label class="f">Deadline<input name="due" type="date" value="${t.due ? String(t.due).slice(0, 10) : ''}" ${dis}></label>
+        <label class="f">Priority<select name="priority" ${dis}>${['High', 'Medium', 'Low'].map(p => opt(p, p, t.priority || 'Medium')).join('')}</select></label>
+        <label class="f">Status<select name="status" ${dis}>${TASK_STATUSES.map(s => opt(s.key, s.label, t.status || 'todo')).join('')}</select></label>
+      </div>
+      <label class="f">Progress · <span id="pv">${Number(t.progress) || 0}%</span><input name="progress" type="range" min="0" max="100" step="5" value="${Number(t.progress) || 0}" ${dis} style="padding:0;accent-color:var(--purple)"></label>
+      <div class="f">Assign to <small style="text-transform:none;letter-spacing:0;font-weight:500">a whole student team, or specific people</small>
+        <input class="who-q" placeholder="Search people or teams…" ${dis}>
+        <div class="who">${choices.map(c => `<label class="check" data-k="${esc((c.label + ' ' + c.sub).toLowerCase())}"><input type="checkbox" value="${esc(c.key)}" ${chosen.has(c.key) ? 'checked' : ''} ${dis}><span class="av" style="background:${c.color}">${ms(c.icon)}</span><span><b>${esc(c.label)}</b><br><small>${esc(c.sub)}</small></span></label>`).join('') || '<p class="muted">Add people first (People section).</p>'}</div></div>
+      ${edit ? `<label class="check"><input type="checkbox" name="notify" ${isNew ? 'checked' : ''}> Email ${isNew ? 'the assignees' : 'anyone newly assigned'} with their private task link</label>` : ''}
+      <p class="err"></p></div>
+    <div class="mf">${!isNew && edit && (me.role === 'Admin' || t.createdBy === me.email) ? `<button type="button" class="btn ghost" data-del>${ms('delete')}Delete</button>` : ''}${!isNew ? `<button type="button" class="btn ghost" data-remind>${ms('notifications')}Send reminder</button>` : ''}<span class="grow" style="flex:1"></span>
+      <button class="btn ghost" value="cancel">Close</button>${edit ? `<button class="btn" data-ok>${ms('check')}${isNew ? 'Create task' : 'Save'}</button>` : ''}</div></form>`;
+  const f = $('form', modal);
+  f.progress.oninput = () => ($('#pv').textContent = f.progress.value + '%');
+  f.status.onchange = () => { if (f.status.value === 'done') { f.progress.value = 100; f.progress.oninput(); } };
+  $('.who-q', modal).oninput = e => $$('.who label', modal).forEach(l => (l.hidden = !l.dataset.k.includes(e.target.value.toLowerCase())));
+  $('[data-ok]', modal)?.addEventListener('click', async e => {
+    e.preventDefault();
+    const body = { id: t.id, title: f.title.value, details: f.details.value, challengeId: f.challengeId.value, due: f.due.value, priority: f.priority.value, status: f.status.value, progress: f.progress.value,
+      assignees: $$('.who input:checked', modal).map(i => i.value) };
+    try {
+      const r = await run(e.currentTarget, () => api('saveTask', token, body, { notify: f.notify?.checked }));
+      modal.close(); toast(`${isNew ? 'Task created' : 'Task saved'}${r.notified ? ` · emailed ${r.notified}` : ''}`); refresh();
+    } catch (err) { $('.err', modal).textContent = err.message; }
+  });
+  $('[data-remind]', modal)?.addEventListener('click', async e => { try { const n = await run(e.currentTarget, () => api('remindTask', token, t.id)); toast(`Reminder emailed to ${n}`); } catch (err) { $('.err', modal).textContent = err.message; } });
+  $('[data-del]', modal)?.addEventListener('click', async e => { if (!confirm(`Delete "${t.title}"? This cannot be undone.`)) return; await run(e.currentTarget, () => api('deleteTask', token, t.id)); modal.close(); toast('Task deleted'); refresh(); });
+  modal.showModal();
+}

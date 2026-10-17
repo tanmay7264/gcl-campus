@@ -9,7 +9,7 @@ const ok = (r) => { assert(r.ok, 'expected ok, got: ' + r.error); return r.value
 const err = (r, re) => { assert(!r.ok, 'expected an error'); assert(re.test(r.error), 'unexpected error: ' + r.error); };
 
 // Stage keys match the site's copy.
-const siteStages = fs.readFileSync(path.join(__dirname, '..', 'site', 'crm-stages.js'), 'utf8').match(/key: '(\w+)'/g).map((s) => s.slice(6, -1));
+const siteStages = fs.readFileSync(path.join(__dirname, '..', 'site', 'crm-stages.js'), 'utf8').split('export const ST ')[0].match(/key: '(\w+)'/g).map((s) => s.slice(6, -1));
 assert.deepStrictEqual(siteStages, [...C.STAGES], 'site/crm-stages.js and Crm.gs STAGES differ');
 
 // Users: an admin and a coordinator.
@@ -113,3 +113,47 @@ assert.strictEqual(rm.challenges, demo.challenges);
 assert.strictEqual(C.readAll_('Challenges').length, realBefore, 'real challenges untouched');
 assert(!C.readAll_('Activity').some((a) => String(a.challengeId).startsWith('DEMO-')) && !C.readAll_('Users').some((u) => u.email.endsWith('.example')));
 console.log('Demo data tests passed.');
+// Shared lists match between site and backend.
+const site = fs.readFileSync(path.join(__dirname, '..', 'site', 'crm-stages.js'), 'utf8');
+assert.deepStrictEqual([...site.matchAll(/\{ key: '([\w ]+)', icon/g)].map((m) => m[1]), [...C.PERSON_TYPES], 'PERSON_TYPES differ');
+assert.deepStrictEqual([...site.matchAll(/\{ key: '(\w+)', label: '[^']+', color/g)].map((m) => m[1]).filter((k) => C.TASK_STATUSES.includes(k)), [...C.TASK_STATUSES], 'TASK_STATUSES differ');
+
+// People & tasks: add, import, assign to a team, email with private link, self-update, permissions, demo cleanup.
+const mail0 = state.mail.length;
+const fac = ok(api('savePerson', coord.token, { type: 'Faculty', name: 'Dr. Real Mentor', email: 'mentor@weschool.edu' }));
+err(api('savePerson', coord.token, { type: 'Student', name: 'Dup', email: 'mentor@weschool.edu' }), /already in People/);
+err(api('savePerson', coord.token, { ...fac, active: false }), /Only Admins/);
+const imp = ok(api('importPeople', admin.token, 'Student', 'Asha Rao, asha@stu.edu, Team Real\nBen Das\tben@stu.edu\tTeam Real\nbad line, not-an-email\nAsha Again, asha@stu.edu, Team Real'));
+assert.strictEqual(imp.added, 2); assert.strictEqual(imp.skipped.length, 2);
+const task = ok(api('saveTask', coord.token, { title: 'Interview 5 shop owners', challengeId: id, assignees: ['team:Team Real', fac.id], due: '2020-01-01', progress: 20, status: 'doing' }, { notify: true }));
+assert.strictEqual(task.notified, 3, 'two team members + faculty emailed');
+assert(state.mail.slice(mail0).every((m) => /tasks\/#[0-9a-f]{32}/.test(m.htmlBody)));
+const asha = C.readAll_('People').find((p) => p.email === 'asha@stu.edu');
+const mine = ok(api('getMyTasks', asha.accessToken));
+assert(mine.tasks.length === 1 && mine.tasks[0].viaTeam && !JSON.stringify(mine).includes('accessToken'));
+const upd = ok(api('updateMyTask', asha.accessToken, task.id, { progress: 60, comment: 'Did 3 of 5' }));
+assert.strictEqual(upd.progress, 60);
+err(api('updateMyTask', asha.accessToken, 'T-999', { progress: 10 }), /not assigned/);
+err(api('getMyTasks', 'x'.repeat(30)), /NOT_FOUND/);
+assert(ok(api('getDashboard', admin.token)).activity.some((a) => a.kind === 'task' && a.user === 'Asha Rao (Student)' && a.detail.includes('Did 3 of 5')));
+const done = ok(api('updateMyTask', asha.accessToken, task.id, { status: 'done' }));
+assert(done.status === 'done' && done.progress === 100);
+// The other coordinator-free admin can delete; a coordinator who didn't create it and doesn't own the challenge cannot.
+ok(api('updateChallenge', admin.token, id, { owner: 'admin@gcl.test' }));
+const other = ok(api('login', 'new@weschool.edu', 'longenough1'));
+err(api('saveTask', other.token, { ...task, title: 'Hijack' }), /Only the task creator/);
+err(api('deleteTask', other.token, task.id), /Only the task creator/);
+C.weeklyDigest(); assert(state.mail.at(-1).htmlBody.includes('Overdue tasks'));
+ok(api('deleteTask', admin.token, task.id));
+// Demo people/tasks load and remove cleanly; real people stay.
+const realPeople = C.readAll_('People').length;
+const d2 = ok(api('loadDemoData', admin.token));
+assert(d2.people > 100 && d2.tasks > 50, 'demo stakeholders and tasks');
+const demoTask = C.readAll_('Tasks').find((t) => t.id.startsWith('DEMO-T') && t.assignees.startsWith('team:'));
+const mailN = state.mail.length;
+err(api('remindTask', admin.token, demoTask.id), /No assignee with an email/);
+assert.strictEqual(state.mail.length, mailN, 'demo assignees are never emailed');
+ok(api('removeDemoData', admin.token));
+assert.strictEqual(C.readAll_('People').length, realPeople);
+assert(!C.readAll_('Tasks').some((t) => t.id.startsWith('DEMO-')));
+console.log('People & tasks tests passed.');

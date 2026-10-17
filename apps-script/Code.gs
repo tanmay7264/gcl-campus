@@ -20,6 +20,14 @@ var API_FUNCTIONS = {
   sendEmail: function (token, id, mail) { return sendEmail(token, id, mail); },
   saveUser: function (token, user) { return saveUser(token, user); },
   loadDemoData: function (token) { return loadDemoData(token); },
+  savePerson: function (token, p) { return savePerson(token, p); },
+  importPeople: function (token, type, text) { return importPeople(token, type, text); },
+  sendTaskLink: function (token, id) { return sendTaskLink(token, id); },
+  saveTask: function (token, t, opts) { return saveTask(token, t, opts); },
+  deleteTask: function (token, id) { return deleteTask(token, id); },
+  remindTask: function (token, id) { return remindTask(token, id); },
+  getMyTasks: function (tok) { return getMyTasks(tok); },
+  updateMyTask: function (tok, id, upd) { return updateMyTask(tok, id, upd); },
   removeDemoData: function (token) { return removeDemoData(token); }
 };
 
@@ -53,7 +61,9 @@ var TABLES = {
     'mentor', 'stage', 'stageAt', 'priority', 'owner', 'facultyMentor', 'industryMentor', 'studentTeam',
     'touchpointDate', 'touchpointLabel', 'trackToken', 'updated', 'closedReason', 'tags'],
   Activity: ['at', 'challengeId', 'user', 'kind', 'detail', 'shared'],
-  Users: ['email', 'name', 'role', 'active', 'salt', 'hash', 'inviteCode', 'inviteExpires', 'created']
+  Users: ['email', 'name', 'role', 'active', 'salt', 'hash', 'inviteCode', 'inviteExpires', 'created'],
+  People: ['id', 'type', 'name', 'email', 'phone', 'organisation', 'role', 'team', 'challengeIds', 'notes', 'active', 'accessToken', 'created', 'updated', 'addedBy'],
+  Tasks: ['id', 'challengeId', 'title', 'details', 'assignees', 'due', 'priority', 'status', 'progress', 'createdBy', 'created', 'updated', 'completedAt']
 };
 
 function table_(name) {

@@ -70,8 +70,15 @@ function weeklyDigest() {
       list('Touchpoints in the next 14 days', soon, function (c) { return esc_(c.touchpointLabel || 'Touchpoint') + ' on ' + fmtDate_(c.touchpointDate); }) +
       list('Stuck for over 7 days', stuck, function (c) { return STAGE_LABEL[c.stage]; }) +
       list('No owner yet', unowned, function (c) { return STAGE_LABEL[c.stage]; }) +
+      taskList_(readAll_('Tasks').filter(function (t) { return t.status !== 'done' && t.due && new Date(t.due) < now; })) +
       button_(SITE_URL + 'admin/', 'Open the Command Centre'))
   });
+}
+
+function taskList_(rows) {
+  return '<h3 style="font-size:15px;margin:22px 0 6px">Overdue tasks (' + rows.length + ')</h3>' + (rows.length
+    ? '<ul style="padding-left:18px;margin:0">' + rows.slice(0, 15).map(function (t) { return '<li>' + esc_(t.title) + ' · due ' + fmtDate_(t.due) + ' · ' + Number(t.progress || 0) + '%' + (t.challengeId ? ' · ' + t.challengeId : '') + '</li>'; }).join('') + '</ul>'
+    : '<p style="color:#7A7590;margin:0">Nothing overdue.</p>');
 }
 
 function esc_(s) {

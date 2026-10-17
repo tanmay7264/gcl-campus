@@ -17,3 +17,21 @@ export const STAGES = [
 export const ST = Object.fromEntries(STAGES.map((s, i) => [s.key, { ...s, i }]));
 export const PATH = STAGES.filter(s => !['hold', 'declined'].includes(s.key)); // the happy path, for steppers
 export const TYPES = ['Industry challenge', 'Social challenge', 'Sustainability / SDG', 'Specific business issue', 'Survey / research work', 'Process needing innovative intervention'];
+
+// Stakeholders and tasks. Keep keys in sync with PERSON_TYPES / TASK_STATUSES in apps-script/People.gs.
+export const PERSON_TYPES = [
+  { key: 'Student', icon: 'school', color: '#3FA796' },
+  { key: 'Faculty', icon: 'co_present', color: '#66518A' },
+  { key: 'Company', icon: 'business_center', color: '#E8892B' },
+  { key: 'Industry mentor', icon: 'handshake', color: '#4F86C6' },
+  { key: 'Alumni', icon: 'workspace_premium', color: '#B98A55' },
+  { key: 'Other', icon: 'person', color: '#7A7590' },
+];
+export const PT = Object.fromEntries(PERSON_TYPES.map(t => [t.key, t]));
+export const TASK_STATUSES = [
+  { key: 'todo', label: 'To do', color: '#7A7590' },
+  { key: 'doing', label: 'In progress', color: '#4F86C6' },
+  { key: 'blocked', label: 'Blocked', color: '#C0504D' },
+  { key: 'done', label: 'Done', color: '#5E8430' },
+];
+export const TS = Object.fromEntries(TASK_STATUSES.map(s => [s.key, s]));

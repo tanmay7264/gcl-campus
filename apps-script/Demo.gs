@@ -1,4 +1,5 @@
-// Demo data for showing the Command Centre: about 38 realistic challenges, history and three demo teammates.
+// Demo data for showing the Command Centre: about 38 realistic challenges with history, three demo teammates,
+// and stakeholders (students per team, faculty, company contacts, mentors, alumni) with tasks and progress.
 // Everything demo is marked: IDs start with DEMO-, tags contain "demo", emails end in .example (so no email can ever
 // reach a real person), and demo teammates have no password (they cannot sign in). removeDemoData_ deletes all of it.
 
@@ -79,10 +80,61 @@ function seedDemo_(owner) {
       if (c.touchpointDate) acts.push({ at: new Date(now - r() * 3 * day), challengeId: c.id, user: actor, kind: 'touchpoint', detail: 'Next touchpoint: ' + c.touchpointLabel + ' on ' + fmtDate_(c.touchpointDate), shared: true });
     });
     appendMany_('Challenges', rows);
+    var pt = seedDemoPeople_(rows, r, now, day);
+    acts = acts.concat(pt.acts);
     acts.sort(function (a, b) { return a.at - b.at; });
     appendMany_('Activity', acts);
-    return { challenges: rows.length, activity: acts.length };
+    return { challenges: rows.length, activity: acts.length, people: pt.people, tasks: pt.tasks };
   });
+}
+
+// Students in each team, faculty, company contacts, mentors, alumni, plus tasks with deadlines and progress.
+function seedDemoPeople_(rows, r, now, day) {
+  var first = ['Aarav', 'Diya', 'Vihaan', 'Ananya', 'Ishaan', 'Saanvi', 'Reyansh', 'Myra', 'Arnav', 'Kiara', 'Atharv', 'Aditi', 'Kabir', 'Riya', 'Shaurya', 'Tara', 'Yash', 'Zoya', 'Om', 'Naina'];
+  var last = ['Shah', 'Menon', 'Joshi', 'Reddy', 'Bose', 'Kapoor', 'Pillai', 'Sethi', 'Agarwal', 'Fernandes', 'Kulkarni', 'Banerjee'];
+  var n = 0, people = [], tasks = [], acts = [];
+  var person = function (type, name, extra) {
+    n++;
+    var o = { id: 'DEMO-P' + ('00' + n).slice(-3), type: type, name: name, email: name.toLowerCase().replace(/[^a-z]+/g, '.').replace(/^\.|\.$/g, '') + '@gcl-demo.example',
+      phone: '', organisation: '', role: '', team: '', challengeIds: '', notes: '', active: true, accessToken: Utilities.getUuid().replace(/-/g, ''),
+      created: new Date(now - 60 * day), updated: new Date(now - 60 * day), addedBy: 'Demo data' };
+    Object.keys(extra || {}).forEach(function (k) { o[k] = extra[k]; });
+    people.push(o); return o;
+  };
+  var faculty = ['Dr. Kavita Shah', 'Prof. Anil Joshi', 'Dr. Ritu Bhat'].map(function (f) { return person('Faculty', f, { organisation: 'WeSchool Mumbai', role: 'Faculty mentor' }); });
+  ['Neha Kapoor (Alumni 2023)', 'Rohit Sinha (Alumni 2022)'].forEach(function (a) { person('Alumni', a, { organisation: 'GCL alumni network', role: 'Peer reviewer' }); });
+  person('Other', 'Placement Cell (demo)', { organisation: 'WeSchool', role: 'Recruiter liaison' });
+  var k = 0, tk = 0;
+  var TEMPLATES = {
+    team: [['Kick-off call with the company', 'faculty', 0], ['Draft the refined problem statement', 'team', 20], ['Share any data the team can use', 'company', 0]],
+    stakeholders: [['Map all stakeholders on one page', 'team', 60], ['Book 3 stakeholder interviews', 'company', 40], ['Review the stakeholder map', 'faculty', 0]],
+    journey: [['Build the current-state journey map', 'team', 50], ['Shadow 2 customers end to end', 'team', 30], ['Validate pain points with the company', 'company', 0]],
+    insights: [['Synthesise interviews into insights', 'team', 70], ['Draft 3 opportunity spaces', 'team', 45], ['Phase I presentation to the company', 'faculty', 10]],
+    prototype: [['Build the clickable prototype', 'team', 55], ['Test the prototype with 5 users', 'team', 20], ['Give feedback on the prototype', 'company', 0], ['Check feasibility numbers', 'faculty', 30]],
+    final: [['Finalise the business case', 'team', 85], ['Rehearse the final presentation', 'team', 60], ['Confirm the final presentation slot', 'company', 100]],
+    completed: [['Submit the final deck and prototype', 'team', 100], ['Share feedback on the GCL experience', 'company', 100]]
+  };
+  rows.forEach(function (c) {
+    if (!c.studentTeam) return;
+    var team = [];
+    for (var i = 0; i < 4 + (k % 2); i++, k++) team.push(person('Student', first[k % first.length] + ' ' + last[(k * 5 + i) % last.length], { team: c.studentTeam, role: i === 0 ? 'Team lead' : 'Team member', organisation: 'PGDM 2025-27', challengeIds: c.id }));
+    var contact = person(c.mentor ? 'Industry mentor' : 'Company', c.name, { organisation: c.organisation, role: c.designation, challengeIds: c.id, email: c.email });
+    var fac = faculty.filter(function (f) { return f.name === c.facultyMentor; })[0] || faculty[0];
+    fac.challengeIds = fac.challengeIds ? fac.challengeIds + ', ' + c.id : c.id;
+    (TEMPLATES[c.stage] || TEMPLATES.team).forEach(function (t, j) {
+      tk++;
+      var who = t[1] === 'team' ? 'team:' + c.studentTeam : t[1] === 'company' ? contact.id : fac.id;
+      if (t[1] === 'team' && j === 1) who = team[1].id + ',' + team[2].id; // some work goes to specific students
+      var due = new Date(now + (j * 5 - 3 + (r() * 8 - 2)) * day), progress = t[2];
+      var status = c.stage === 'completed' || progress === 100 ? 'done' : progress === 0 ? (r() < 0.15 ? 'blocked' : 'todo') : r() < 0.1 ? 'blocked' : 'doing';
+      tasks.push({ id: 'DEMO-T' + ('00' + tk).slice(-3), challengeId: c.id, title: t[0], details: '', assignees: who, due: due, priority: j === 0 ? 'High' : 'Medium',
+        status: status, progress: status === 'done' ? 100 : progress, createdBy: c.owner || '', created: new Date(now - 10 * day), updated: new Date(now - r() * 4 * day), completedAt: status === 'done' ? new Date(now - r() * 6 * day) : '' });
+      if (progress > 0) acts.push({ at: new Date(now - r() * 4 * day), challengeId: c.id, user: (t[1] === 'team' ? team[0].name + ' (Student)' : fac.name + ' (Faculty)'), kind: 'task', detail: 'Task "' + t[0] + '": ' + (status === 'done' ? 'Done' : progress + '%'), shared: false });
+    });
+  });
+  appendMany_('People', people);
+  appendMany_('Tasks', tasks);
+  return { people: people.length, tasks: tasks.length, acts: acts };
 }
 
 function removeDemoData_() {
@@ -96,6 +148,8 @@ function removeDemoData_() {
     del('Challenges', isDemoChallenge_);
     del('Activity', function (a) { return ids.indexOf(a.challengeId) >= 0; });
     del('Users', function (u) { return String(u.email).slice(-DEMO_DOMAIN.length) === DEMO_DOMAIN; });
+    del('People', function (p) { return /^DEMO-/.test(p.id); });
+    del('Tasks', function (t) { return /^DEMO-/.test(t.id); });
     return { challenges: ids.length, rows: n };
   });
 }
