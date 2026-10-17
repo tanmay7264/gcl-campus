@@ -263,12 +263,15 @@ Native `<dialog>`, centred, max 900px wide by 92vh, radius `--r`, scrollable, st
 - **Fly-to on selection:** 0.9s tween to a framed target (§3.1) at a sensible zoom (places 1.5, groups 1.6–2.4).
 - **Follow mode** for live content: the camera glides after the moving group (target lerp about `dt × 1.6`) until the visitor grabs the map.
 
-### 5.2 World palette & materials
-- Matte standard materials (roughness ≈ 0.85), no metalness, flat shading on foliage.
-- **Ground:** `--bg`-family greys; lots `#F4F6FB`; lawns soft green `#D8EBC2`; paths warm stone `#E9E2D3`.
-- **Buildings:** warm white bodies `#FBF8F2`, light blue-grey windows `#CFDAEE`, coloured **roofs** carry meaning (primary / success / accent by role).
-- **Nature:** foliage `#9CC46A` (icosahedrons), trunks `#B9A58A`.
-- **Lights:** hemisphere (white / `#C9D2E6`, 1.6) plus a directional sun (1.7) with soft 2048 shadows.
+### 5.2 World palette, light & atmosphere
+- Matte standard materials (roughness ≈ 0.85–1), no metalness except water; flat shading on foliage.
+- **Sky:** transparent WebGL canvas over a CSS vertical gradient (pale blue → mist → soft green). Add a light fog that matches the gradient so far ground fades into the horizon.
+- **Tone mapping:** Neutral (exposure about 1.05) for natural light without shifting brand colours.
+- **Light:** sky/ground hemisphere (cool blue above, grass green below, about 1.45) plus a **warm** directional sun (about 2.1) with soft 2048 shadows.
+- **Ground:** natural grass with vertex-colour variation (`#B7D18C` blended with drier and lusher greens). Maintained lawns get **mowing stripes**. Paving is warm stone `#E6DCC8` with darker edging `#CDBFA6`.
+- **Buildings:** warm white `#FBF8F2` with a stone plinth and cornice; white-framed blue glass windows `#8FB3D1`; coloured **roofs** carry meaning; signboards in the roof colour.
+- **Nature:** several tree species (rounded shade trees, tall conifer-style trees, a flowering accent tree, palms at entrances), trunks `#8A6E52`, foliage in 4–5 greens via per-instance colour, plus hedges, shrubs and flower beds.
+- **Context makes it real:** a boundary wall, roads with markings, slow traffic, parking and a surrounding landscape stop the world from floating in a void.
 
 ### 5.3 Modelling rules
 - **Low-poly primitives only:** boxes, cylinders, cones, spheres, capsules. No textures except tiny canvas sprites if unavoidable.

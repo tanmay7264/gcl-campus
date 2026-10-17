@@ -196,7 +196,7 @@ Native `<dialog>` showing the full student poster image (`assets/poster-*.jpg`),
 ## 5. 3D campus (Three.js, `site/scene.js`)
 
 ### 5.1 Rendering & camera
-- Three.js 0.169 via CDN import map, plus `MapControls`. WebGL with antialiasing, PCF soft shadows, hemisphere light, and a directional "sun" (2048 shadow map).
+- Three.js 0.169 via CDN import map, plus `MapControls`. WebGL with antialiasing and a transparent canvas over a CSS **sky gradient**; Neutral tone mapping (exposure 1.05) keeps brand colours true; sky/grass hemisphere light `#E6EEFF`/`#B9C79F` (1.45) plus a warm sun `#FFF1DC` (2.1) with soft 2048 shadows; a light haze (`Fog #E8EEF2`, 112–150) toward the horizon.
 - **Orthographic isometric camera:** offset `(60, 52, 60)`, frustum half-height 15 (widened on portrait screens), tilt locked, spin allowed.
 - **Zoom** 0.7–3.6, default 0.84. Pan is clamped to ±13 units. The default look-at is nudged (`HOME`) so the Industry Gate clears the KPI cards.
 - **Camera tweens:** 0.9s cubic ease-out. Dragging cancels a tween and stops the follow mode.
@@ -215,7 +215,19 @@ Native `<dialog>` showing the full student poster image (`assets/poster-*.jpg`),
 | Demo Day Auditorium (Solution) | 11.8, 21.8 | 5.6×3.6×2.3 | `#7B63A6` | hall, with a canopy over the door; stage, screen and audience inside |
 | WeSchool Main Block | 4.6, 21.9 | 4.4×2.6×2.4 | `#66518A` | hip, with clock tower and waving flag |
 
-**Grounds:** a path loop (3→21), cross paths, four quad lawns, a plaza with fountain (pulsing spout), and an entry spur through the gate. Kaleidosync's silk-farm field sits outside the west path. Trees, lamp posts and benches are **instanced**, and building windows are a single instanced mesh. Every building has a door facing the quad.
+**Grounds and surroundings** (all seeded, so the campus looks the same on every visit):
+- A 96×96 natural-grass ground with gentle colour variation; inside the wall, the quad lawns have **mowing stripes**.
+- Paved paths with stone edging, paved **forecourts** at every door, and a paved plaza.
+- **Fountain:** a stone basin with a rim, shimmering water, a pedestal, an upper bowl, and 24 arcing water drops.
+- **Kaleidosync silk farm:** a soil plot with mulberry crop rows.
+- **Compound wall** with pillars (purple caps), open at the entry path; palms flank the entrance.
+- **Outside the wall:** a sidewalk, a **ring road** with lane dashes and a zebra crossing, four cars driving on the left, and a visitor parking lot with parked cars.
+- **Trees, by species:** round shade trees (3 overlapping canopy blobs in varied greens), tall Ashoka-style trees (stacked cones), flowering **Gulmohar** (wide orange-red canopy) and palms. They are placed by a collision-aware scatter: along the inside of the wall, as an avenue outside the road, and through the countryside. Trees never land on paths, buildings, tables, lamps, benches or roads.
+- **Smaller greenery:** hedges along building fronts (gap at the door), scattered shrubs, and flower beds around the plaza and beside each forecourt.
+- **Furniture:** benches with seat, backrest and legs; street lamps with an arm and a glowing head that faces the campus centre.
+- **Building detail:** stone plinth, cornice, framed glass windows, and a **name signboard** (canvas texture in the roof colour) on the camera-facing wall. Rooftops have AC units on flat roofs, **solar panels** on the Innovation Lab and a water tank on the Main Block; they lift away with the roof. The Research Library's portico columns flank its door.
+
+Everything repeated is **instanced** (one draw call per part type, with per-instance colours).
 
 **Student teams** (one per past project, at a round table with laptops and a glowing bulb): IDFC (7.6, 7.6), Deloitte (16.4, 7.6), Govardhan (7.6, 16.4), AuraPay (16.4, 16.4), Kaleidosync (0.4, 14.8).
 
@@ -313,7 +325,7 @@ GCL/
 - **No build step:** static files, Three.js from jsDelivr.
 - **Local preview:** `python3 -m http.server 8765 --directory GCL`, then open `/site/` (configured in `.claude/launch.json`).
 - **Deploy:** commit, `git push campus main`; GitHub Pages publishes the repo root in about a minute. The local `main` tracks `campus/main`. The old `weschool-gcl` repo (remote `origin`) is the old site and must not be pushed to.
-- **Cache busting:** every asset URL carries `?v=N` (currently **14**) in `site/index.html` (CSS and main.js) and `site/main.js` (projects, data, scene imports). **Bump N on every deploy**, or returning visitors may mix old and new files.
+- **Cache busting:** every asset URL carries `?v=N` (currently **15**) in `site/index.html` (CSS and main.js) and `site/main.js` (projects, data, scene imports). **Bump N on every deploy**, or returning visitors may mix old and new files.
 - **Connect the form:** deploy `apps-script/Code.gs` as a Google Apps Script Web App (Execute as me, access Anyone) and paste its `/exec` URL into `SCRIPT_URL` at the top of `site/main.js`.
 - **Add a partner project:**
   1. Add an entry to `projects.js` and a poster to `assets/`.
