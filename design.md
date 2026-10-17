@@ -184,7 +184,7 @@ When something else is selected, the tracker shows "You are here" on that stage 
 Native `<dialog>`, slides in from the right (520px).
 - **Fields:** Organisation*, Your name*, Designation, Work email*, Phone, Challenge type* (Industry · Social · Sustainability/SDG · Specific business issue · Survey/research · Process needing intervention), Challenge statement* (min 30 characters), Supporting link, "I'd like to be an Industry Mentor", plus a hidden honeypot field.
 - Native validation; invalid fields get a red border after the first submit attempt.
-- **Status:** "not connected" until `SCRIPT_URL` is set (see §8).
+- **Status:** connected. Submissions append a row to the Google Sheet "GCL Challenge Submissions" (owner kt19051999@gmail.com) via the Apps Script web app "GCL Form Receiver" (see §8).
 
 ### 4.9 Poster modal
 Native `<dialog>` showing the full student poster image (`assets/poster-*.jpg`), with a sticky close button.
@@ -331,8 +331,8 @@ GCL/
 - **No build step:** static files, Three.js from jsDelivr.
 - **Local preview:** `python3 -m http.server 8765 --directory GCL`, then open `/site/` (configured in `.claude/launch.json`).
 - **Deploy:** commit, `git push campus main`; GitHub Pages publishes the repo root in about a minute. The local `main` tracks `campus/main`. The old `weschool-gcl` repo (remote `origin`) is the old site and must not be pushed to.
-- **Cache busting:** every asset URL carries `?v=N` (currently **18**) in `site/index.html` (CSS and main.js) and `site/main.js` (projects, data, scene imports). **Bump N on every deploy**, or returning visitors may mix old and new files.
-- **Connect the form:** deploy `apps-script/Code.gs` as a Google Apps Script Web App (Execute as me, access Anyone) and paste its `/exec` URL into `SCRIPT_URL` at the top of `site/main.js`.
+- **Cache busting:** every asset URL carries `?v=N` (currently **19**) in `site/index.html` (CSS and main.js) and `site/main.js` (projects, data, scene imports). **Bump N on every deploy**, or returning visitors may mix old and new files.
+- **Connect the form:** deploy `apps-script/Code.gs` as a Google Apps Script Web App (Execute as me, access Anyone) and paste its `/exec` URL into `SCRIPT_URL` at the top of `site/main.js`. Done: the live sheet is https://docs.google.com/spreadsheets/d/1NbKe_Zc7IRJ58F6L13jMAsAbol_quk_T5SVmgZdOLac/edit. If you edit the script, use Deploy → Manage deployments → edit → New version, so the URL stays the same.
 - **Add a partner project:**
   1. Add an entry to `projects.js` and a poster to `assets/`.
   2. Add a colour in `PCOLOR` (`main.js`).
