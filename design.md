@@ -184,7 +184,7 @@ When something else is selected, the tracker shows "You are here" on that stage 
 Native `<dialog>`, slides in from the right (520px).
 - **Fields:** Organisation*, Your name*, Designation, Work email*, Phone, Challenge type* (Industry · Social · Sustainability/SDG · Specific business issue · Survey/research · Process needing intervention), Challenge statement* (min 30 characters), Supporting link, "I'd like to be an Industry Mentor", plus a hidden honeypot field.
 - Native validation; invalid fields get a red border after the first submit attempt.
-- **Status:** connected. Submissions append a row to the Google Sheet "GCL Challenge Submissions" (owner kt19051999@gmail.com) via the Apps Script web app "GCL Form Receiver" (see §8).
+- **Status:** connected to the GCL Command Centre (§10). Submitting returns an ID (`GCL-26-00N`) and a private tracking link, shown in the success message and emailed to the contact.
 
 ### 4.9 Poster modal
 Native `<dialog>` showing the full student poster image (`assets/poster-*.jpg`), with a sticky close button.
@@ -331,8 +331,8 @@ GCL/
 - **No build step:** static files, Three.js from jsDelivr.
 - **Local preview:** `python3 -m http.server 8765 --directory GCL`, then open `/site/` (configured in `.claude/launch.json`).
 - **Deploy:** commit, `git push campus main`; GitHub Pages publishes the repo root in about a minute. The local `main` tracks `campus/main`. The old `weschool-gcl` repo (remote `origin`) is the old site and must not be pushed to.
-- **Cache busting:** every asset URL carries `?v=N` (currently **19**) in `site/index.html` (CSS and main.js) and `site/main.js` (projects, data, scene imports). **Bump N on every deploy**, or returning visitors may mix old and new files.
-- **Connect the form:** deploy `apps-script/Code.gs` as a Google Apps Script Web App (Execute as me, access Anyone) and paste its `/exec` URL into `SCRIPT_URL` at the top of `site/main.js`. Done: the live sheet is https://docs.google.com/spreadsheets/d/1NbKe_Zc7IRJ58F6L13jMAsAbol_quk_T5SVmgZdOLac/edit. If you edit the script, use Deploy → Manage deployments → edit → New version, so the URL stays the same.
+- **Cache busting:** every asset URL carries `?v=N` (currently **20**) in `site/index.html` (CSS and main.js) and `site/main.js` (projects, data, scene imports). **Bump N on every deploy**, or returning visitors may mix old and new files.
+- **Backend:** `apps-script/` is pushed with clasp (`npx @google/clasp push -f`, then `npx @google/clasp deploy -i AKfycbweKcj…` to update the SAME deployment so the URL in `site/api.js` never changes). The sheet is https://docs.google.com/spreadsheets/d/1NbKe_Zc7IRJ58F6L13jMAsAbol_quk_T5SVmgZdOLac/edit. Run `node dev/test.js` before every push; `node dev/server.js` previews everything locally on port 8766 with seeded demo data (sign in `admin@gcl.test` / `gcl-demo-2026`).
 - **Add a partner project:**
   1. Add an entry to `projects.js` and a poster to `assets/`.
   2. Add a colour in `PCOLOR` (`main.js`).
@@ -341,6 +341,23 @@ GCL/
 - **Poster QR:** `SITE_URL` in `poster/poster.html`; re-export the PDF after changing it.
 
 ---
+
+## 10. GCL Command Centre (admin CRM) and company tracker
+
+- **URLs:** admin at `site/admin/` (deep link `#c=GCL-26-001`, invite `#invite=<code>`); company tracker at `site/track/#<token>`. Both use `site/api.js` and the shared stage list `site/crm-stages.js` (must match `STAGES` in `apps-script/Crm.gs`; the test checks).
+- **Data:** Google Sheet tabs `Challenges`, `Activity` (append-only audit log, `shared` = visible on the tracker) and `Users` (salted, iterated SHA-256; sessions in CacheService for 6h; 5 failed sign-ins lock an email for 10 min).
+- **Stages:** New → Under review → Accepted → Team formed → Stakeholder mapping → Customer journey → Insights → Prototype → Final presentation → Completed, plus On hold and Declined.
+- **Roles:** Admin (everything, team management, invites) and Coordinator (challenges they own or mentor; may claim unassigned ones). The server enforces roles; the UI only mirrors them.
+- **Views:**
+  - **Command Centre:** 6 KPI cards (clickable filters), Needs attention (waiting for review 3+ days, touchpoint overdue, no owner, 7+ days in a stage, touchpoint within 3 days) with one-click actions, upcoming touchpoints, charts (pipeline, type, 12-week submissions, workload) and recent activity.
+  - **Pipeline:** Kanban; dragging a card opens a confirm with "Email the company an update" and a preview.
+  - **Challenges:** filters, sortable columns, CSV export (formula-safe).
+  - **Partners:** grouped by organisation, repeat partners flagged.
+  - **Team:** roles, deactivate, resend invite; new teammates set their own password from an emailed link.
+  - **Challenge drawer:** stage stepper and actions, contact, ownership and mentors, next touchpoint (shared), email composer (template, edit, send), tracking link, notes with "Share with company", full timeline.
+- **Emails (MailApp, from the owner's Gmail):** acknowledgement plus admin alert on submission; stage templates in `apps-script/Emails.gs`; weekly digest (Sheet menu → Install weekly digest, Mondays 9am). Shared log entries never contain email addresses or phone numbers.
+- **Tracker shows only:** organisation, type, the first 400 characters of the challenge, stage and stage dates, next touchpoint, student team and industry mentor, shared updates.
+- **Sheet menu "GCL CRM":** set up (creates tabs, migrates the old one-tab form sheet), add or reset a user, install weekly digest, show links, remove test challenges.
 
 ## 9. Accessibility & performance notes
 

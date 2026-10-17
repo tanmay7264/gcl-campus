@@ -380,6 +380,16 @@ A scripted, looping story walks a group through the process so visitors *see* it
 
 ---
 
+## 9b. Operations console (CRM / command centre) pattern
+
+For the team-facing side of an experience, use a calm 2D console in the same tokens, not the 3D world:
+- **Shell:** a left sidebar (brand, 4–6 sections, attention badge, signed-in user) and a sticky translucent top bar (title + one-line status, search, refresh). On phones the sidebar becomes a bottom tab bar.
+- **Home answers "what needs me today?":** KPI cards that act as filters, then a ranked **Needs attention** list where each row has exactly one primary action, then an agenda, charts and an activity feed.
+- **Pipeline board:** one column per stage with counts, cards showing priority dot, owner avatar and days in stage (red when stale). Drag to move, always followed by a confirm that offers to notify the stakeholder with a preview.
+- **Record drawer:** a right-side dialog containing the progress stepper, actions, details, editable ownership, scheduler, communication tools and the full timeline.
+- **Transparency by design:** an append-only activity log with a per-entry "shared" flag. A public, token-linked status page shows only shared entries, never contact details. Stakeholder emails are templates that a human edits and sends.
+- **Roles:** enforce on the server; mirror in the UI (locked cards, hidden admin forms). Invite people by an emailed set-password link, never by typing passwords for them.
+
 ## 10. New-project checklist
 
 - [ ] Set the theme tokens (§2.6), category colours and 3D roof/role palette.
