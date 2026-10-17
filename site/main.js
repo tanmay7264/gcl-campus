@@ -1,9 +1,8 @@
 // Bump ?v= on every deploy (here and in index.html) so browsers never mix old and new files.
-import { PROJECTS } from './projects.js?v=19';
-import { STAGES, ROLE, PEOPLE, WHY } from './data.js?v=19';
+import { PROJECTS } from './projects.js?v=20';
+import { STAGES, ROLE, PEOPLE, WHY } from './data.js?v=20';
 
-// Google Apps Script Web App URL (see ../apps-script/Code.gs). Empty = form shows "not connected".
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbweKcjWpQeEY_NZBNFdS3mjXZIZNKd2e99bRk5fGL89_-qAKMldAvrN61NtBALL1aqG/exec';
+import { api, esc } from './api.js?v=20';
 
 const $ = (s, el = document) => el.querySelector(s);
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -217,23 +216,21 @@ addEventListener('keydown', e => {
   if (e.key === 'Escape' && !document.querySelector('dialog[open]') && current) select(null);
 });
 
-/* ---------- Partner form ---------- */
+/* ---------- Partner form: saved in the GCL Command Centre (apps-script/) ---------- */
 const form = $('#form'), status = $('.status', form);
 form.addEventListener('submit', async e => {
   e.preventDefault();
   form.classList.add('touched'); status.className = 'status';
   if (!form.checkValidity()) { form.reportValidity(); return; }
-  if (form.website.value) return; // honeypot filled = bot
-  if (!SCRIPT_URL) { status.className = 'status err'; status.textContent = 'Submissions are not connected yet. Please email the GCL team in the meantime.'; return; }
   const btn = $('button[type=submit]', form);
   btn.disabled = true; status.textContent = 'Sending…';
   try {
-    // no-cors: Apps Script sends no CORS headers; the response is opaque but the row is written.
-    await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: new URLSearchParams(new FormData(form)) });
-    status.className = 'status ok'; status.textContent = 'Thank you! Your challenge has been submitted. The GCL team will be in touch.';
+    const r = await api('submitChallenge', Object.fromEntries(new FormData(form)));
+    status.className = 'status ok';
+    status.innerHTML = r.id ? `Thank you! Your challenge <b>${esc(r.id)}</b> is in. We have emailed you a private link to follow its progress. <a href="${esc(r.trackUrl)}" target="_blank" rel="noopener">Track your challenge →</a>` : 'Thank you!';
     form.reset(); form.classList.remove('touched');
-  } catch {
-    status.className = 'status err'; status.textContent = 'Could not send. Please check your connection and try again.';
+  } catch (err) {
+    status.className = 'status err'; status.textContent = err.message;
   } finally { btn.disabled = false; }
 });
 
@@ -242,7 +239,7 @@ addEventListener('hashchange', () => select(location.hash.slice(1) || null));
 const initial = location.hash.slice(1) || null;
 select(initial, { fly: false });
 
-import('./scene.js?v=19').then(({ createScene }) => {
+import('./scene.js?v=20').then(({ createScene }) => {
   map = createScene($('#scene'), $('#labels'), {
     onSelect: id => select(id), reduceMotion,
     onCamera: on => { cameraOn = on; renderCamToggle(); },

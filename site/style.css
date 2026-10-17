@@ -253,7 +253,7 @@ label.check { display: flex; gap: 10px; align-items: center; color: var(--ink); 
 label.check input { width: 17px; height: 17px; margin: 0; accent-color: var(--purple); }
 .hp { position: absolute; left: -9999px; }
 .status { margin-top: 12px; font-weight: 600; font-size: 13px; min-height: 1.4em; }
-.status.ok { color: #3F7A1C; } .status.err { color: #C0392B; }
+#form .status { display: block; } .status.ok { color: #3F7A1C; } .status.err { color: #C0392B; }
 .poster-modal { margin: auto; max-width: min(900px, 94vw); max-height: 92vh; padding: 0; border-radius: var(--r); overflow: auto; background: #fff; }
 .poster-modal .icon { position: sticky; top: 10px; margin: 10px 10px -42px auto; background: #fff; box-shadow: var(--shadow); z-index: 1; }
 

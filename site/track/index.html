@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<title>Your GCL challenge · WeSchool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL@20..24,500,0..1&display=block" rel="stylesheet">
+<link rel="stylesheet" href="../admin/admin.css?v=20">
+<style>
+  body { background: linear-gradient(180deg, #D6E4F2 0, #EEF1F8 320px, #F4F3F9 100%); min-height: 100vh; }
+  .tk-top { display: flex; align-items: center; gap: 12px; padding: 16px 24px; max-width: 920px; margin: 0 auto; }
+  .tk-top img { height: 34px; } .tk-top b { display: block; font-size: 14px; } .tk-top .grow { flex: 1; }
+  .tk { max-width: 920px; margin: 0 auto; padding: 4px 24px 60px; display: flex; flex-direction: column; gap: 16px; }
+  .hero h1 { font-size: 26px; margin: 4px 0 6px; }
+  .now { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+  .now div { background: #F7F5FB; border-radius: 12px; padding: 12px 14px; } .now div.you { background: var(--orange-l); }
+  .now small { display: block; font-weight: 700; font-size: 11px; letter-spacing: .5px; text-transform: uppercase; margin-bottom: 3px; }
+  .vsteps { list-style: none; display: flex; flex-direction: column; }
+  .vsteps li { display: flex; gap: 12px; position: relative; padding-bottom: 14px; }
+  .vsteps li:not(:last-child)::before { content: ''; position: absolute; left: 11px; top: 24px; bottom: 0; width: 2px; background: #E6E2EF; }
+  .vsteps li.done:not(:last-child)::before { background: var(--green); }
+  .vsteps .dot { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; flex: none; background: #fff; border: 2px solid #D9D4E6; color: #fff; z-index: 1; }
+  .vsteps .dot .ms { font-size: 15px; }
+  .vsteps li.done .dot { background: var(--green); border-color: var(--green); }
+  .vsteps li.cur .dot { background: var(--purple); border-color: var(--purple); box-shadow: 0 0 0 5px var(--purple-l); }
+  .vsteps b { display: block; font-size: 13.5px; } .vsteps li:not(.done):not(.cur) b { color: var(--faint); font-weight: 600; }
+  .side2 { display: flex; flex-direction: column; gap: 16px; }
+  .two { display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 760px) { .two, .now { grid-template-columns: 1fr; } .tk, .tk-top { padding-left: 14px; padding-right: 14px; } .hero h1 { font-size: 21px; } }
+</style>
+</head>
+<body>
+<header class="tk-top"><img src="../../assets/weschool-logo.png" alt="WeSchool"><div><b>GCL Challenge Tracker</b><small>Global Citizen Leaders</small></div><span class="grow"></span><a class="btn ghost sm" href="../">Visit the GCL Campus</a></header>
+<main class="tk" id="tk" aria-live="polite"><div class="loading">Loading your challenge…</div></main>
+<script type="module" src="track.js?v=20"></script>
+</body>
+</html>
