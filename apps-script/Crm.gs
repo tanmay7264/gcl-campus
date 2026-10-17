@@ -81,7 +81,7 @@ function getTracking(token) {
 function getDashboard(token) {
   var me = requireUser_(token);
   var users = readAll_('Users').map(publicUser_);
-  var activity = readAll_('Activity').slice(-600).map(plain_).reverse();
+  var activity = readAll_('Activity').sort(function (a, b) { return new Date(b.at) - new Date(a.at); }).slice(0, 600).map(plain_);
   return { me: me, challenges: readAll_('Challenges').map(plain_), activity: activity, users: users, generatedAt: new Date().toISOString() };
 }
 
@@ -173,6 +173,7 @@ function sendEmail(token, id, mail) {
   if (!to.length || to.some(function (e) { return !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e); })) throw new Error('Check the recipient email addresses.');
   if (to.length > 10) throw new Error('At most 10 recipients per email.');
   var subject = clean_(mail.subject, 200), body = String(mail.body || '').slice(0, 8000);
+  if (to.every(isDemoAddress_)) { withLock_(function () { log_(id, me, 'email', 'Demo: email to the company contact not sent (demo address): ' + subject, false); }); return true; }
   if (!subject || body.trim().length < 5) throw new Error('Add a subject and a message.');
   MailApp.sendEmail({
     to: to.join(','), name: 'WeSchool GCL', replyTo: me.email, subject: subject,
@@ -182,5 +183,7 @@ function sendEmail(token, id, mail) {
   withLock_(function () { log_(id, me, 'email', (toCompany ? 'Emailed the company contact' : 'Emailed ' + to.join(', ')) + ': ' + subject, toCompany); });
   return true;
 }
+
+function isDemoAddress_(e) { return /\.example$/i.test(String(e).trim()); } // reserved domain, used by demo data
 
 function fmtDate_(d) { return Utilities.formatDate(new Date(d), 'Asia/Kolkata', 'EEE d MMM yyyy'); }

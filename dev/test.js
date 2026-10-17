@@ -93,3 +93,23 @@ assert.strictEqual(state.mail.length, n + 1);
 assert.strictEqual(state.mail.at(-1).to, 'admin@gcl.test');
 
 console.log('All GCL Command Centre tests passed.');
+
+// Demo data: loads once, never emails demo contacts, removes cleanly without touching real challenges.
+const realBefore = C.readAll_('Challenges').length, mailBefore = state.mail.length;
+const demo = ok(api('loadDemoData', admin.token));
+assert(demo.challenges >= 30 && demo.activity > demo.challenges);
+err(api('loadDemoData', admin.token), /already loaded/);
+err(api('loadDemoData', coord.token), /Only Admins/);
+const d1 = C.readAll_('Challenges').find((c) => c.id === 'DEMO-01');
+assert(/\.example$/.test(d1.email) && d1.tags === 'demo');
+const movable = C.readAll_('Challenges').find((c) => c.id.startsWith('DEMO-') && c.stage !== 'completed');
+ok(api('setStage', admin.token, movable.id, 'completed', { notify: true }));
+ok(api('sendEmail', admin.token, movable.id, { to: movable.email, subject: 'Hello', body: 'Demo message body' }));
+assert.strictEqual(state.mail.length, mailBefore, 'demo contacts must never be emailed');
+const feedDates = ok(api('getDashboard', admin.token)).activity.map((a) => new Date(a.at).getTime());
+assert(feedDates.every((t, i) => i === 0 || feedDates[i - 1] >= t), 'activity feed newest first');
+const rm = ok(api('removeDemoData', admin.token));
+assert.strictEqual(rm.challenges, demo.challenges);
+assert.strictEqual(C.readAll_('Challenges').length, realBefore, 'real challenges untouched');
+assert(!C.readAll_('Activity').some((a) => String(a.challengeId).startsWith('DEMO-')) && !C.readAll_('Users').some((u) => u.email.endsWith('.example')));
+console.log('Demo data tests passed.');

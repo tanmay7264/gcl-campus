@@ -18,7 +18,9 @@ var API_FUNCTIONS = {
   addNote: function (token, id, text, shared) { return addNote(token, id, text, shared); },
   previewEmail: function (token, id, template, message) { return previewEmail(token, id, template, message); },
   sendEmail: function (token, id, mail) { return sendEmail(token, id, mail); },
-  saveUser: function (token, user) { return saveUser(token, user); }
+  saveUser: function (token, user) { return saveUser(token, user); },
+  loadDemoData: function (token) { return loadDemoData(token); },
+  removeDemoData: function (token) { return removeDemoData(token); }
 };
 
 function doPost(e) {
@@ -116,6 +118,9 @@ function onOpen() {
     .addItem('Show links', 'showLinks')
     .addSeparator()
     .addItem('Remove test challenges (organisation starts with TEST)', 'removeTestChallenges')
+    .addSeparator()
+    .addItem('Load demo data', 'menuLoadDemo')
+    .addItem('Remove demo data', 'menuRemoveDemo')
     .addToUi();
 }
 

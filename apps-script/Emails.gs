@@ -40,6 +40,7 @@ function composeMail_(c, template, message) {
 // Sends a stage email to the company contact and logs it (shared, so it shows on their tracker).
 function mail_(c, template, message, me) {
   var m = composeMail_(c, template, message);
+  if (isDemoAddress_(m.to)) return; // demo data never sends email
   MailApp.sendEmail({
     to: m.to, name: 'WeSchool GCL', replyTo: me ? me.email : '', subject: m.subject,
     htmlBody: emailShell_(esc_(m.subject), esc_(m.body).replace(/\n/g, '<br>') + '<p style="margin-top:22px">' + button_(trackUrl_(c), 'Track your challenge') + '</p>')

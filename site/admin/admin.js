@@ -32,6 +32,8 @@ const stageChip = s => `<span class="chip" style="background:${ST[s].color}1F;co
 const avatar = email => email ? `<span class="av" style="background:${colorOf(email)}" title="${esc(userName(email))}">${initials(userName(email))}</span>` : '<span class="av none" title="No owner">?</span>';
 const orgTile = (c, lg) => `<span class="tile${lg ? ' lg' : ''}" style="background:${colorOf(c.organisation)}">${esc(String(c.organisation).replace(/^'/, '')[0] || '?')}</span>`;
 const org = c => esc(String(c.organisation).replace(/^'/, '')); // sheet-safe prefix is for the Sheet, not the screen
+const isDemo = c => /^DEMO-/.test(c.id);
+const demoChip = c => isDemo(c) ? ' <span class="chip" title="Demo data: never emailed">Demo</span>' : '';
 
 async function run(btn, fn) { // disables a button while a request runs; shows errors as toasts
   if (btn) btn.disabled = true;
@@ -273,7 +275,7 @@ function renderTable() {
     </div></section><section class="card scroll" id="tbl"></section>`;
   $$('[data-f]', page).forEach(s => s.onchange = () => { F[s.dataset.f] = s.value; renderTable(); });
   $('#tbl').innerHTML = rows.length ? `<table class="tbl"><thead><tr>${COLS.map(([k, l]) => `<th data-sort="${k}" class="${F.sort === k ? 'sorted' : ''}" aria-sort="${F.sort === k ? (F.dir > 0 ? 'ascending' : 'descending') : 'none'}">${l}${F.sort === k ? (F.dir > 0 ? ' ↑' : ' ↓') : ''}</th>`).join('')}</tr></thead><tbody>
-    ${rows.map(c => `<tr data-open="${c.id}"><td><small>${c.id}</small></td><td><div class="org">${orgTile(c)}<div><b>${org(c)}</b><small>${esc(c.name)}${c.mentor === 'Yes' ? ' · mentor' : ''}</small></div></div></td>
+    ${rows.map(c => `<tr data-open="${c.id}"><td><small>${c.id}</small></td><td><div class="org">${orgTile(c)}<div><b>${org(c)}${demoChip(c)}</b><small>${esc(c.name)}${c.mentor === 'Yes' ? ' · mentor' : ''}</small></div></div></td>
       <td><small>${esc(c.type)}</small></td><td>${stageChip(c.stage)}</td><td>${c.owner ? `<span class="row">${avatar(c.owner)}<small>${esc(userName(c.owner))}</small></span>` : '<small>—</small>'}</td>
       <td><span class="row"><span class="pri ${esc(c.priority)}"></span>${esc(c.priority)}</span></td><td><small>${c.touchpointDate && OPEN(c) ? esc(c.touchpointLabel || '') + '<br>' + fmt(c.touchpointDate) : '—'}</small></td><td><small>${ago(c.updated)}</small></td></tr>`).join('')}
     </tbody></table><p class="muted" style="padding:10px 4px 0">${rows.length} of ${D.challenges.length} challenges</p>` : '<p class="empty">No challenges match these filters.</p>';
@@ -314,13 +316,23 @@ function renderTeam() {
       <label class="f">Email<input name="email" type="email" required></label><label class="f">Name<input name="name" required></label>
       <label class="f">Role<select name="role"><option>Coordinator</option><option>Admin</option></select></label>
       <small>They get an email with a link to set their own password. Coordinators can act on challenges they own or mentor, and claim unassigned ones.</small>
-      <button class="btn">${ms('send')}Send invite</button></form></section>` : ''}</div>`;
+      <button class="btn">${ms('send')}Send invite</button></form></section>
+    <section class="card s12"><header>${ms('science')}<h3>Demo data</h3><small>${D.challenges.filter(isDemo).length ? D.challenges.filter(isDemo).length + ' demo challenges loaded' : 'not loaded'}</small></header>
+      <div class="row"><p class="muted grow">About 38 realistic sample challenges with history, touchpoints and three demo teammates, for showing the Command Centre. They are labelled "Demo", use reserved .example emails (nothing is ever sent to them), and remove in one click without touching real challenges.</p>
+      ${D.challenges.some(isDemo) ? `<button class="btn ghost" data-demo="remove">${ms('delete_sweep')}Remove demo data</button>` : `<button class="btn soft" data-demo="load">${ms('science')}Load demo data</button>`}</div></section>` : ''}</div>`;
   if (!admin) return;
   const save = async (u, btn, msg) => { await run(btn, () => api('saveUser', token, u)); toast(msg); refresh(); };
   const find = e => D.users.find(u => u.email === e);
   $$('[data-role]').forEach(s => s.onchange = () => save({ ...find(s.dataset.role), role: s.value }, s, 'Role updated'));
   $$('[data-toggle]').forEach(b => b.onclick = () => { const u = find(b.dataset.toggle); save({ ...u, active: !u.active }, b, u.active ? 'Deactivated' : 'Reactivated'); });
   $$('[data-resend]').forEach(b => b.onclick = () => save({ ...find(b.dataset.resend), resendInvite: true }, b, 'Invite sent'));
+  $$('[data-demo]').forEach(b => b.onclick = async () => {
+    const load = b.dataset.demo === 'load';
+    if (!load && !confirm('Remove all demo challenges, their history and demo teammates? Real challenges are not touched.')) return;
+    b.textContent = load ? 'Loading demo data…' : 'Removing…';
+    const r = await run(b, () => api(load ? 'loadDemoData' : 'removeDemoData', token));
+    toast(load ? `Loaded ${r.challenges} demo challenges` : `Removed ${r.challenges} demo challenges`); refresh();
+  });
   $('#addUser').onsubmit = e => { e.preventDefault(); const f = e.target; if (!f.reportValidity()) return; save({ email: f.email.value, name: f.name.value, role: f.role.value, active: true }, $('button', f), 'Invite sent to ' + f.email.value); };
 }
 
@@ -335,7 +347,7 @@ function openChallenge(id, keepScroll) {
   const opt = (v, l, cur) => `<option value="${esc(v)}" ${v === cur ? 'selected' : ''}>${esc(l)}</option>`;
   const dis = edit ? '' : 'disabled';
   const top = drawer.scrollTop;
-  drawer.innerHTML = `<div class="dw-h">${orgTile(c, true)}<div class="t"><div class="kick">${c.id} · ${esc(c.type)}</div><h2>${org(c)}</h2>
+  drawer.innerHTML = `<div class="dw-h">${orgTile(c, true)}<div class="t"><div class="kick">${c.id} · ${esc(c.type)}</div><h2>${org(c)}${demoChip(c)}</h2>
       <div class="row" style="margin-top:6px">${stageChip(c.stage)}<span class="chip"><span class="pri ${esc(c.priority)}"></span>${esc(c.priority)}</span><small>${days(c.stageAt)} days in stage · received ${fmt(c.created)}</small></div></div>
       <button class="icon" data-act="close" aria-label="Close">${ms('close')}</button></div>
     <div class="dw-b">
