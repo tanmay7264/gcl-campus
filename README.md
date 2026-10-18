@@ -1,21 +1,44 @@
-# WeSchool GCL World
+# WeSchool GCL Campus & Command Centre
 
-Live: https://tanmay7264.github.io/weschool-gcl/
+The WeSchool **Global Citizen Leaders (GCL)** system has four parts:
+- a 3D campus website where companies learn how GCL works and submit a challenge;
+- a private tracker for each company's challenge;
+- a "My tasks" page for students, faculty and mentors;
+- the **Command Centre** admin dashboard, where the GCL team manages challenges, people and tasks.
 
-The current 3D showcase is in `world/`. It includes seven pre-rendered pages: the program, privacy notice and five student projects. Three.js and GSAP load progressively; readable content and project links are included in the HTML. Motion controls and a standard mobile/reduced-motion view are retained.
+| | Live |
+|---|---|
+| GCL Campus | https://tanmay7264.github.io/gcl-campus/ |
+| Command Centre (staff sign-in) | https://tanmay7264.github.io/gcl-campus/site/admin/ |
 
-## Update
+**How it's built:**
+- **Frontend:** static HTML, CSS and JavaScript in `site/`, served by GitHub Pages.
+- **Backend:** Google Apps Script in `apps-script/`, using a Google Sheet as the database and Gmail for email.
 
-Use Node 22.13 or newer. Run `npm ci`, `npx tsc --noEmit` and `npm run build`. Commit the updated source, `world/` and lockfile to `main`. GitHub Pages is configured to publish the repository root. The build only clears its own `world/` output.
+## Docs
 
-`world-src/` contains the public frontend. `world-public/` contains original project screenshots, branding and the overview PDF. The earlier website and poster remain in `site/`, `poster/` and the existing root files.
+- **[working.md](working.md):** how everything works. It covers architecture, data, flows, security, running locally, deploying and troubleshooting. **Start here.**
+- **[design.md](design.md):** the full GCL design and UI spec (tokens, components, 3D campus, admin).
+- **[design-system.md](design-system.md):** a brand-neutral design system to reuse in other projects.
 
-## Submissions and private inbox
+## Quick start
 
-GitHub Pages runs no server or database. Challenge links open the existing Sites form at https://weschool-gcl-world.vishalband2000.chatgpt.site/submit. Team inbox links open its protected `/admin` page. That service keeps submission data and authorization out of this public repository. Its inbox uses a separately configured, authorised manager account. Do not put credentials, submission records or owner email configuration in this repository.
+```bash
+node dev/test.js
+```
 
-The legacy Apps Script example is not connected to the current site. There is no email delivery or paid service requirement.
+```bash
+node dev/server.js
+```
 
-## References
+The server opens on http://localhost:8766/site/ with demo data. Sign in to the admin as `admin@gcl.test` with password `gcl-demo-2026`.
 
-Project images are cropped from the supplied student references. Proposed features and demonstration values are not presented as commercial outcomes, partner endorsements or verified impact.
+Deploy the frontend by pushing to the `campus` remote (`tanmay7264/gcl-campus`). For the backend, run `npx @google/clasp push -f`, then update the existing deployment. See [working.md §10](working.md#10-change-and-deploy).
+
+## Legacy: GCL World (`world/`)
+
+`world/`, `world-src/`, `world-public/`, `scripts/build-world.mjs`, `vite.world.config.ts`, `package.json` and `tsconfig.json` are an earlier React + Vite "GCL World" build made for the original site (https://tanmay7264.github.io/weschool-gcl/).
+- The live GCL Campus doesn't use them.
+- They're kept for reference only.
+- They build with `npm ci && npm run build` on Node 22.13 or newer.
+- The original `weschool-gcl` repository stays frozen at that version, so don't push this project there.
