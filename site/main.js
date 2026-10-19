@@ -1,8 +1,8 @@
 // Bump ?v= on every deploy (here and in index.html) so browsers never mix old and new files.
-import { PROJECTS } from './projects.js?v=23';
-import { STAGES, ROLE, PEOPLE, WHY } from './data.js?v=23';
+import { PROJECTS } from './projects.js?v=24';
+import { STAGES, ROLE, PEOPLE, WHY } from './data.js?v=24';
 
-import { api, esc } from './api.js?v=23';
+import { api, esc } from './api.js?v=24';
 
 const $ = (s, el = document) => el.querySelector(s);
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -234,12 +234,29 @@ form.addEventListener('submit', async e => {
   } finally { btn.disabled = false; }
 });
 
+/* ---------- First visit: guided tour or explore freely ---------- */
+// Asked once per visit, only when the 3D campus is up and the visitor didn't arrive via a deep link.
+function askHowToExplore() {
+  const dlg = $('#startModal');
+  if (location.hash || sessionStorage.getItem('gclExplore')) return;
+  let picked = false;
+  const choose = mode => {
+    picked = true; sessionStorage.setItem('gclExplore', mode); dlg.close();
+    if (mode === 'auto') { select(story?.project || PROJECTS[0].id); map?.setAutoCamera(true); }
+    else map?.setAutoCamera(false);
+  };
+  dlg.querySelectorAll('[data-start]').forEach(b => b.onclick = () => choose(b.dataset.start));
+  dlg.addEventListener('close', () => { if (!picked) choose('manual'); }, { once: true }); // Esc = explore myself
+  dlg.showModal();
+  dlg.querySelector('[data-start="auto"]').focus();
+}
+
 /* ---------- Boot ---------- */
 addEventListener('hashchange', () => select(location.hash.slice(1) || null));
 const initial = location.hash.slice(1) || null;
 select(initial, { fly: false });
 
-import('./scene.js?v=23').then(({ createScene }) => {
+import('./scene.js?v=24').then(({ createScene }) => {
   map = createScene($('#scene'), $('#labels'), {
     onSelect: id => select(id), reduceMotion,
     onCamera: on => { cameraOn = on; renderCamToggle(); },
@@ -262,6 +279,7 @@ import('./scene.js?v=23').then(({ createScene }) => {
   PROJECTS.forEach(p => map.addLabel(p.id, `${ms('groups')}${p.org}`, 'project'));
   map.addLabel('about', `${ms('account_balance')}WeSchool Main Block`, 'project');
   if (current) { map.select(current); if (P[current]) map.watch(current); }
+  askHowToExplore();
 }).catch(err => {
   console.warn('3D campus disabled:', err);
   document.body.classList.add('no-webgl'); $('.nogl').hidden = false;

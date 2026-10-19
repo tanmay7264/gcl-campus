@@ -257,6 +257,19 @@ label.check input { width: 17px; height: 17px; margin: 0; accent-color: var(--pu
 .hp { position: absolute; left: -9999px; }
 .status { margin-top: 12px; font-weight: 600; font-size: 13px; min-height: 1.4em; }
 #form .status { display: block; } .status.ok { color: #3F7A1C; } .status.err { color: #C0392B; }
+.start-modal { margin: auto; width: min(480px, calc(100vw - 32px)); padding: 26px 26px 22px; border-radius: 20px; background: #fff; box-shadow: 0 30px 80px rgba(31,27,45,.25); text-align: left; }
+.start-modal[open] { animation: slide .35s cubic-bezier(.2,.8,.2,1); }
+.start-modal img { height: 34px; margin-bottom: 14px; }
+.start-modal .kick { display: block; color: var(--orange); font-weight: 700; font-size: 11px; letter-spacing: .5px; text-transform: uppercase; }
+.start-modal h2 { font-size: 21px; margin: 4px 0 8px; letter-spacing: -.2px; }
+.start-modal p { color: var(--muted); font-size: 13.5px; line-height: 1.5; margin-bottom: 16px; }
+.choices { display: grid; gap: 10px; }
+.choice { display: flex; gap: 14px; align-items: flex-start; text-align: left; padding: 14px 16px; border-radius: 14px; border: 1.5px solid var(--line); background: #fff; transition: border-color .15s, background .15s, transform .15s; }
+.choice:hover { border-color: var(--purple); background: #FAF8FD; transform: translateY(-1px); }
+.choice > .ms { font-size: 26px; color: var(--purple); margin-top: 1px; }
+.choice b { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14.5px; } .choice small { display: block; font-size: 12.5px; margin-top: 3px; line-height: 1.4; }
+.choice em { font-style: normal; font-size: 10.5px; font-weight: 700; color: var(--green-d); background: var(--green-l); border-radius: 999px; padding: 2px 8px; }
+.choice.rec { border-color: #CFC3E3; background: var(--purple-l); } .choice.rec:hover { background: #EAE4F4; }
 .poster-modal { margin: auto; max-width: min(900px, 94vw); max-height: 92vh; padding: 0; border-radius: var(--r); overflow: auto; background: #fff; }
 .poster-modal .icon { position: sticky; top: 10px; margin: 10px 10px -42px auto; background: #fff; box-shadow: var(--shadow); z-index: 1; }
 

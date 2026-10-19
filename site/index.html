@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL@20..24,500,0..1&display=block" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=23">
+<link rel="stylesheet" href="style.css?v=24">
 <script type="importmap">{ "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
@@ -110,11 +110,22 @@
   </form>
 </dialog>
 
+<dialog id="startModal" class="start-modal" aria-labelledby="startTitle">
+  <img src="../assets/weschool-logo.png" alt="WeSchool">
+  <small class="kick">Welcome to the GCL Campus</small>
+  <h2 id="startTitle">How would you like to explore?</h2>
+  <p>Watch a real partner project move across the campus, or look around at your own pace. You can switch any time with the camera button in the Live Project Tracker.</p>
+  <div class="choices">
+    <button class="choice rec" data-start="auto"><span class="ms">play_circle</span><span><b>Take me on the tour <em>Recommended</em></b><small>The camera follows a live project into each building, step by step.</small></span></button>
+    <button class="choice" data-start="manual"><span class="ms">pan_tool</span><span><b>I'll explore myself</b><small>Drag, zoom and click any building, team or person.</small></span></button>
+  </div>
+</dialog>
+
 <dialog id="posterModal" class="poster-modal">
   <button class="icon" data-close aria-label="Close"><span class="ms">close</span></button>
   <img alt="">
 </dialog>
 
-<script type="module" src="main.js?v=23"></script>
+<script type="module" src="main.js?v=24"></script>
 </body>
 </html>

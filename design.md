@@ -191,6 +191,13 @@ Native `<dialog>`, slides in from the right (520px).
 ### 4.9 Poster modal
 Native `<dialog>` showing the full student poster image (`assets/poster-*.jpg`), with a sticky close button.
 
+### 4.9b Start choice ("How would you like to explore?")
+A centred dialog shown once per visit (sessionStorage `gclExplore`), only when the 3D campus loads and there is no deep-link hash. It has the WeSchool logo, an orange kicker, a title, one line of help, and two choice cards:
+- **Take me on the tour** (purple tint, "Recommended" chip): selects the live project and turns the auto-camera on.
+- **I'll explore myself**: turns the auto-camera off. Esc means the same.
+
+The camera button in the Live Project Tracker switches modes later.
+
 ### 4.10 Credit
 "Designed and built by **Tanmay**". Only "Tanmay" is linked (https://www.tanmayportfolio.me/, new tab, `rel="noopener"`).
 
@@ -333,7 +340,7 @@ GCL/
 - **No build step:** static files, Three.js from jsDelivr.
 - **Local preview:** `python3 -m http.server 8765 --directory GCL`, then open `/site/` (configured in `.claude/launch.json`).
 - **Deploy:** commit, `git push campus main`; GitHub Pages publishes the repo root in about a minute. The local `main` tracks `campus/main`. The old `weschool-gcl` repo (remote `origin`) is the old site and must not be pushed to.
-- **Cache busting:** every asset URL carries `?v=N` (currently **23** for the campus page) in `site/index.html` (CSS and main.js) and `site/main.js` (projects, data, scene imports). **Bump N on every deploy**, or returning visitors may mix old and new files.
+- **Cache busting:** every asset URL carries `?v=N` (currently **24** for the campus page) in `site/index.html` (CSS and main.js) and `site/main.js` (projects, data, scene imports). **Bump N on every deploy**, or returning visitors may mix old and new files.
 - **Backend:** `apps-script/` is pushed with clasp (`npx @google/clasp push -f`, then `npx @google/clasp deploy -i AKfycbweKcj…` to update the SAME deployment so the URL in `site/api.js` never changes). The sheet is https://docs.google.com/spreadsheets/d/1NbKe_Zc7IRJ58F6L13jMAsAbol_quk_T5SVmgZdOLac/edit. Run `node dev/test.js` before every push; `node dev/server.js` previews everything locally on port 8766 with seeded demo data (sign in `admin@gcl.test` / `gcl-demo-2026`).
 - **Add a partner project:**
   1. Add an entry to `projects.js` and a poster to `assets/`.
