@@ -1,8 +1,8 @@
 // Bump ?v= on every deploy (here and in index.html) so browsers never mix old and new files.
-import { PROJECTS } from './projects.js?v=20';
-import { STAGES, ROLE, PEOPLE, WHY } from './data.js?v=20';
+import { PROJECTS } from './projects.js?v=23';
+import { STAGES, ROLE, PEOPLE, WHY } from './data.js?v=23';
 
-import { api, esc } from './api.js?v=20';
+import { api, esc } from './api.js?v=23';
 
 const $ = (s, el = document) => el.querySelector(s);
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -239,7 +239,7 @@ addEventListener('hashchange', () => select(location.hash.slice(1) || null));
 const initial = location.hash.slice(1) || null;
 select(initial, { fly: false });
 
-import('./scene.js?v=20').then(({ createScene }) => {
+import('./scene.js?v=23').then(({ createScene }) => {
   map = createScene($('#scene'), $('#labels'), {
     onSelect: id => select(id), reduceMotion,
     onCamera: on => { cameraOn = on; renderCamToggle(); },

@@ -48,7 +48,7 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, onCamera, red
   // Camera + controls (isometric-style orthographic, tilt locked, spin allowed)
   const FR = 15, OFFSET = new THREE.Vector3(60, 52, 60);
   const HOME = new THREE.Vector3(-2.2, 0, -1.4); // default look-at, nudged so the Industry Gate clears the KPI cards
-  const camera = new THREE.OrthographicCamera(-FR, FR, FR, -FR, -200, 400);
+  const camera = new THREE.OrthographicCamera(-FR, FR, FR, -FR, 30, 240); // the camera stays ~100 units from its target; a tight range keeps depth precise (no flicker)
   camera.position.copy(OFFSET);
   const controls = new MapControls(camera, canvas);
   controls.enableDamping = !reduceMotion; controls.dampingFactor = 0.08;
@@ -84,10 +84,11 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, onCamera, red
     }
     g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
     const ground = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 })); ground.position.copy(at(12, 12, -0.03)); ground.receiveShadow = true; scene.add(ground);
-    scene.add(mesh(B3(SLAB, 0.9, SLAB), mat('#F3EFE7'), 0, -0.48, 0));                     // plinth
-    scene.add(mesh(B3(SLAB + 0.04, 0.07, SLAB + 0.04), mat('#7AA342'), 0, -0.085, 0, false)); // brand-green trim under the turf
+    // Each layer sits clearly below the one above it: coplanar faces z-fight and flicker when zooming.
+    scene.add(mesh(B3(SLAB + 0.04, 0.08, SLAB + 0.04), mat('#7AA342'), 0, -0.09, 0, false)); // brand-green trim under the turf (top -0.05)
+    scene.add(mesh(B3(SLAB, 0.9, SLAB), mat('#F3EFE7'), 0, -0.6, 0));                       // plinth (top -0.15, bottom -1.05)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshStandardMaterial({ color: '#E6EBE6', roughness: 1 }));
-    floor.rotation.x = -Math.PI / 2; floor.position.y = -0.93; floor.receiveShadow = true; scene.add(floor); }
+    floor.rotation.x = -Math.PI / 2; floor.position.y = -1.2; floor.receiveShadow = true; scene.add(floor); }
 
   // Campus grounds inside the compound wall
   flat(-1.5, -1.5, 27, 27, -0.005, '#BCD794');
@@ -945,7 +946,8 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, onCamera, red
     const w = canvas.clientWidth, h = canvas.clientHeight;
     for (const l of labels) {
       v.copy(l.anchor).project(camera);
-      l.el.style.transform = `translate(${((v.x + 1) / 2 * w).toFixed(1)}px, ${((1 - v.y) / 2 * h).toFixed(1)}px) translate(-50%, -100%)`;
+      l.x = (v.x + 1) / 2 * w; l.y = (1 - v.y) / 2 * h;
+      l.el.style.transform = `translate(${l.x.toFixed(1)}px, ${l.y.toFixed(1)}px) translate(-50%, -100%)`;
       l.el.classList.toggle('on', l.id === selected);
     }
     const gc = groupCentre();
@@ -954,8 +956,34 @@ export function createScene(canvas, labelsEl, { onSelect, onStory, onCamera, red
     spot.position.set(gc.x, 0.05, gc.z); spotFill.position.set(gc.x, 0.045, gc.z);
     if (!reduceMotion) spot.material.opacity = 0.55 + Math.sin(t * 3) * 0.25;
     v.copy(gc).project(camera);
-    storyEl.style.transform = `translate(${((v.x + 1) / 2 * w).toFixed(1)}px, ${((1 - v.y) / 2 * h).toFixed(1)}px) translate(-50%, -100%)`;
+    storyLabel.x = (v.x + 1) / 2 * w; storyLabel.y = (1 - v.y) / 2 * h;
+    storyEl.style.transform = `translate(${storyLabel.x.toFixed(1)}px, ${storyLabel.y.toFixed(1)}px) translate(-50%, -100%)`;
+    declutter();
   });
+
+  // Labels never sit on top of each other or under the UI panels: place them in priority order and hide
+  // any that would overlap a label already placed or a panel. Sizes and panel rects are re-measured a few
+  // times a second (measuring every frame would force layout).
+  const storyLabel = { el: storyEl, x: 0, y: 0, rank: 0 };
+  let measured = 0, panels = [];
+  function declutter() {
+    const all = [storyLabel, ...labels];
+    if (performance.now() - measured > 400) {
+      measured = performance.now();
+      for (const l of all) { l.w = l.el.offsetWidth; l.h = l.el.offsetHeight; }
+      panels = [...document.querySelectorAll('.topbar, .kpis, .legend, .controls, #inspector, .tracker, .list, .credit')]
+        .map(e => e.getBoundingClientRect()).filter(r => r.width && r.height);
+    }
+    const rank = l => l === storyLabel ? 0 : l.id === selected ? 1 : l.el.classList.contains('featured') ? 2 : l.el.classList.contains('stage') ? 3 : 4;
+    const placed = [], cw = canvas.clientWidth, ch = canvas.clientHeight;
+    for (const l of all.sort((a, b) => rank(a) - rank(b))) {
+      const r = { l: l.x - l.w / 2 - 3, t: l.y - l.h - 9, r: l.x + l.w / 2 + 3, b: l.y + 3 };
+      const hit = q => r.l < q.right && r.r > q.left && r.t < q.bottom && r.b > q.top;
+      const off = !l.w || r.l < 0 || r.r > cw || r.t < 0 || r.b > ch || panels.some(hit) || placed.some(q => hit({ left: q.l, right: q.r, top: q.t, bottom: q.b }));
+      l.el.classList.toggle('hid', off);
+      if (!off) placed.push(r);
+    }
+  }
 
   return {
     select, addLabel, storyEl,

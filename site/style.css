@@ -18,6 +18,7 @@ small { font-size: 11px; color: var(--muted); }
 #scene { width: 100%; height: 100%; display: block; touch-action: none; }
 .labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
 .maplabel { position: absolute; left: 0; top: 0; pointer-events: auto; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; background: #fff; border-radius: 999px; padding: 4px 10px 4px 4px; font-size: 11.5px; font-weight: 600; box-shadow: 0 4px 12px rgba(52, 46, 90, .14); transition: background .2s, color .2s; will-change: transform; }
+.maplabel { transition: background .2s, color .2s, opacity .25s; } .maplabel.hid { opacity: 0; pointer-events: none; } /* hidden by the declutter pass in scene.js */
 .maplabel i { font-style: normal; font-size: 10px; font-weight: 700; color: #fff; background: var(--purple); border-radius: 999px; min-width: 18px; height: 18px; display: grid; place-items: center; padding: 0 5px; }
 .maplabel i.orange { background: var(--orange); }
 .maplabel.project { padding: 3px 8px; border-radius: 6px; font-size: 10.5px; color: #5B5770; background: rgba(255,255,255,.92); }
@@ -44,10 +45,10 @@ small { font-size: 11px; color: var(--muted); }
 
 /* Top bar */
 .topbar { position: fixed; z-index: 3; top: 0; left: 0; right: 0; height: 64px; display: flex; align-items: center; gap: 18px; padding: 0 24px; background: #fff; border-bottom: 1px solid var(--line); }
-.brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
+.brand { display: flex; flex: none; align-items: center; gap: 12px; text-decoration: none; color: inherit; white-space: nowrap; }
 .brand img { height: 34px; }
 .brand span { display: flex; flex-direction: column; line-height: 1.2; } .brand b { font-size: 14px; }
-.search { display: flex; align-items: center; gap: 8px; width: 380px; background: #F4F2F9; border: 1px solid var(--line); border-radius: 10px; padding: 0 10px 0 12px; color: var(--muted); }
+.search { display: flex; align-items: center; gap: 8px; flex: 0 1 380px; min-width: 150px; background: #F4F2F9; border: 1px solid var(--line); border-radius: 10px; padding: 0 10px 0 12px; color: var(--muted); }
 .search input { flex: 1; border: 0; background: none; padding: 9px 0; font: inherit; font-size: 13px; color: var(--ink); outline: none; }
 .search:focus-within { border-color: var(--purple); background: #fff; }
 kbd { font: 600 11px Inter; border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; background: #fff; }
@@ -142,11 +143,13 @@ kbd { font: 600 11px Inter; border: 1px solid var(--line); border-radius: 5px; p
 .actions { display: flex; gap: 8px; flex-wrap: wrap; position: sticky; bottom: -18px; margin: 0 -20px -18px; padding: 12px 20px 18px; background: #fff; border-top: 1px solid var(--line); }
 
 /* Tracker */
-.tracker { left: 24px; bottom: 24px; display: flex; align-items: center; gap: 24px; padding: 14px 14px 14px 20px; max-width: calc(100vw - 48px - 360px - 24px); }
+.tracker { left: 24px; bottom: 24px; display: flex; align-items: center; gap: 20px; padding: 14px 14px 14px 20px; max-width: calc(100vw - 48px - 360px - 24px); }
+.steps-wrap { flex: 1 1 auto; min-width: 0; } /* stepper and narrator shrink to fit instead of sliding under the project list */
 .steps-wrap h2 { font-size: 14px; font-weight: 700; display: flex; gap: 10px; align-items: baseline; margin-bottom: 10px; }
 .steps-wrap h2 small { font-weight: 400; }
 .steps { list-style: none; display: flex; }
-.steps li { position: relative; width: 96px; }
+.steps li { position: relative; flex: 1 1 0; min-width: 0; max-width: 96px; }
+.steps b, .steps small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .steps li:not(:last-child)::after { content: ""; position: absolute; top: 15px; left: calc(50% + 20px); width: calc(100% - 40px); height: 2px; background: #E2DDEC; }
 .steps li.done::after { background: var(--green); }
 .steps button { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 3px; }
@@ -157,7 +160,7 @@ kbd { font: 600 11px Inter; border: 1px solid var(--line); border-radius: 5px; p
 .steps button:hover .dot { transform: scale(1.1); }
 .steps b { font-size: 12px; } .steps small { font-size: 10px; color: var(--faint); }
 .steps li.todo b { color: var(--faint); } .steps li.active small { color: var(--purple); font-weight: 600; }
-.current { min-width: 230px; }
+.current { flex: 0 1 340px; min-width: 230px; }
 .ccard { display: flex; align-items: center; gap: 12px; background: #F7F5FB; border-radius: 12px; padding: 12px; text-align: left; width: 100%; }
 .ccard .tile { font-size: 11px; }
 .ccard > span:nth-child(2) { flex: 1; display: flex; flex-direction: column; gap: 2px; align-items: flex-start; } .ccard b { font-size: 12px; }
@@ -175,7 +178,7 @@ kbd { font: 600 11px Inter; border: 1px solid var(--line); border-radius: 5px; p
 .steps-wrap h2 small { display: inline-flex; align-items: center; gap: 8px; }
 .featured { display: inline-flex; align-items: center; gap: 6px; background: var(--orange-l); color: #9A5413; font-weight: 700; font-size: 12px; padding: 3px 10px 3px 3px; border-radius: 999px; box-shadow: 0 0 0 1.5px #F0973A inset; }
 .featured .tile { width: 20px; height: 20px; border-radius: 999px; font-size: 10px; }
-.now { width: 340px; background: #FFF8F0; border: 1.5px solid #F6C795; border-radius: 12px; padding: 12px 14px 10px; display: flex; flex-direction: column; gap: 7px; }
+.now { width: 100%; background: #FFF8F0; border: 1.5px solid #F6C795; border-radius: 12px; padding: 12px 14px 10px; display: flex; flex-direction: column; gap: 7px; }
 .now-head { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
 .now-head b { flex: 1; color: #5A3A12; }
 .now-head .step { font-size: 10.5px; font-weight: 600; color: #9A5413; background: #fff; border-radius: 999px; padding: 2px 8px; }
@@ -259,7 +262,7 @@ label.check input { width: 17px; height: 17px; margin: 0; accent-color: var(--pu
 
 /* Responsive */
 @media (max-width: 1280px) { .kpis .kpi:nth-child(3), .program { display: none; } }
-@media (max-width: 1100px) { .live { display: none; } .tracker { flex-wrap: wrap; } .now { width: 100%; } }
+@media (max-width: 1100px) { .live { display: none; } .tracker { flex-wrap: wrap; } .current { flex: 1 1 100%; } }
 /* Phones & small tablets: narrator on top, map in the middle, peek sheet + project strip at the bottom */
 .sheet-toggle { display: none; }
 @media (max-width: 900px) {

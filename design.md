@@ -132,6 +132,8 @@ Three chips: **Companies** (orange), **Students** (teal), **Faculty** (purple). 
 - **Stage label:** white pill, numbered badge (purple; ★ orange for Industry Gate) + building name.
 - **Team label:** translucent tag with a `groups` icon + company name; `WeSchool Main Block` uses `account_balance`.
 - **Featured team label:** orange background and ring, plus a **LIVE** badge.
+- **Decluttering:** every frame `declutter()` in `scene.js` places labels in priority order: story caption, then selected, then featured, then stages, then the rest. It hides (fades out) any label that would overlap a label already placed, any UI panel (top bar, KPIs, legend, controls, inspector, tracker, list, credit), or the screen edge. Sizes and panel positions are re-measured every 400 ms.
+- **Ground layers** are stacked with clear gaps (grass −0.03, green trim top −0.05, plinth top −0.15, floor −1.2), and the camera's near/far planes are 30–240. Coplanar faces flicker (z-fight) when zooming.
 - **Selected label:** purple fill, white text.
 - **Story caption:** dark (`--ink`) bubble with a pointer that follows the live group. It shows the company name plus "Walking to *Building*", "*Stage* · *Building*", or "✓ Solution delivered · Up next: *Company*". Click it to open that stage.
 
@@ -331,7 +333,7 @@ GCL/
 - **No build step:** static files, Three.js from jsDelivr.
 - **Local preview:** `python3 -m http.server 8765 --directory GCL`, then open `/site/` (configured in `.claude/launch.json`).
 - **Deploy:** commit, `git push campus main`; GitHub Pages publishes the repo root in about a minute. The local `main` tracks `campus/main`. The old `weschool-gcl` repo (remote `origin`) is the old site and must not be pushed to.
-- **Cache busting:** every asset URL carries `?v=N` (currently **20**) in `site/index.html` (CSS and main.js) and `site/main.js` (projects, data, scene imports). **Bump N on every deploy**, or returning visitors may mix old and new files.
+- **Cache busting:** every asset URL carries `?v=N` (currently **23** for the campus page) in `site/index.html` (CSS and main.js) and `site/main.js` (projects, data, scene imports). **Bump N on every deploy**, or returning visitors may mix old and new files.
 - **Backend:** `apps-script/` is pushed with clasp (`npx @google/clasp push -f`, then `npx @google/clasp deploy -i AKfycbweKcj…` to update the SAME deployment so the URL in `site/api.js` never changes). The sheet is https://docs.google.com/spreadsheets/d/1NbKe_Zc7IRJ58F6L13jMAsAbol_quk_T5SVmgZdOLac/edit. Run `node dev/test.js` before every push; `node dev/server.js` previews everything locally on port 8766 with seeded demo data (sign in `admin@gcl.test` / `gcl-demo-2026`).
 - **Add a partner project:**
   1. Add an entry to `projects.js` and a poster to `assets/`.

@@ -9,11 +9,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL@20..24,500,0..1&display=block" rel="stylesheet">
-<link rel="stylesheet" href="../admin/admin.css?v=22">
+<link rel="stylesheet" href="../admin/admin.css?v=23">
 <style>
   body { background: linear-gradient(180deg, #D6E4F2 0, #EEF1F8 320px, #F4F3F9 100%); min-height: 100vh; }
   .tk-top { display: flex; align-items: center; gap: 12px; padding: 16px 24px; max-width: 920px; margin: 0 auto; }
   .tk-top img { height: 34px; } .tk-top b { display: block; font-size: 14px; } .tk-top .grow { flex: 1; }
+  .tk-top img { flex: none; } .tk-top > div { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .tk-top b { overflow: hidden; text-overflow: ellipsis; } .tk-top a.btn { text-decoration: none; flex: none; }
+  @media (max-width: 600px) { .tk-top { padding: 12px 14px; gap: 10px; } .tk-top img { height: 28px; } .tk-top small { display: none; } .tk-top b { font-size: 13px; } }
   .tk { max-width: 920px; margin: 0 auto; padding: 4px 24px 60px; display: flex; flex-direction: column; gap: 16px; }
   .hero h1 { font-size: 26px; margin: 4px 0 6px; }
   .now { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
@@ -42,7 +44,7 @@
 </style>
 </head>
 <body>
-<header class="tk-top"><img src="../../assets/weschool-logo.png" alt="WeSchool"><div><b>My GCL tasks</b><small>Global Citizen Leaders</small></div><span class="grow"></span><a class="btn ghost sm" href="../">Visit the GCL Campus</a></header>
+<header class="tk-top"><img src="../../assets/weschool-logo.png" alt="WeSchool"><div><b>My GCL tasks</b><small>Global Citizen Leaders</small></div><span class="grow"></span><a class="btn ghost sm" href="../">GCL Campus</a></header>
 <main class="tk" id="tk" aria-live="polite"><div class="loading">Loading your tasks…</div></main>
 <script type="module" src="tasks.js?v=21"></script>
 </body>
